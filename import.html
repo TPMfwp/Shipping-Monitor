@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Order Import Tool</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;background:#f5f5f7;color:#1d1d1f;padding:2rem;}
+.card{background:white;border-radius:16px;padding:2rem;max-width:600px;margin:0 auto;border:1px solid rgba(0,0,0,0.06);}
+h1{font-size:22px;font-weight:600;margin-bottom:0.5rem;}
+p{font-size:13px;color:#86868b;margin-bottom:1.5rem;line-height:1.6;}
+label{font-size:12px;color:#86868b;display:block;margin-bottom:4px;}
+input{width:100%;border:1px solid #d2d2d7;border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:12px;outline:none;color:#1d1d1f;}
+input:focus{border-color:#0071e3;}
+button{width:100%;background:#0071e3;color:white;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:500;cursor:pointer;margin-bottom:12px;}
+button:hover{background:#0077ed;}
+button:disabled{background:#86868b;cursor:not-allowed;}
+.log{background:#f5f5f7;border-radius:10px;padding:1rem;font-size:12px;font-family:monospace;height:200px;overflow-y:auto;margin-top:1rem;line-height:1.8;}
+.ok{color:#1a7a3a;}.err{color:#c0392b;}.info{color:#0055b8;}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Order Import Tool</h1>
+  <p>Eenmalige import van alle bestaande orders naar het dashboard. Vul je keys in en klik Start.</p>
+
+  <label>Shopify Store URL</label>
+  <input id="store" placeholder="ellisonrowe.myshopify.com">
+
+  <label>Shopify API Token</label>
+  <input id="token" type="password" placeholder="shpss_...">
+
+  <label>ParcelPanel API Key</label>
+  <input id="ppkey" type="password" placeholder="ParcelPanel key">
+
+  <button id="btn" onclick="startImport()">Start import</button>
+
+  <div class="log" id="log">Vul de velden in en klik Start import...</div>
+</div>
+
+<script>
+function log(msg, type='info'){
+  const el = document.getElementById('log');
+  el.innerHTML += `<div class="${type}">${new Date().toLocaleTimeString()} — ${msg}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+async function startImport(){
+  const store = document.getElementById('store').value.trim();
+  const token = document.getElementById('token').value.trim();
+  const ppkey = document.getElementById('ppkey').value.trim();
+
+  if(!store||!token||!ppkey){ alert('Vul alle velden in!'); return; }
+
+  const btn = document.getElementById('btn');
+  btn.disabled = true;
+  btn.textContent = 'Bezig...';
+  document.getElementById('log').innerHTML = '';
+
+  log('Import gestart...', 'info');
+
+  try {
+    const res = await fetch('https://frxyfmfjtadyxhfogdvt.supabase.co/functions/v1/Import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        shopify_store: store,
+        shopify_token: token,
+        pp_key: ppkey
+      })
+    });
+
+    const data = await res.json();
+
+    if(data.error) throw new Error(data.error);
+
+    log(`Klaar! ${data.imported} van ${data.total} orders geïmporteerd`, 'ok');
+    log('Ga naar je dashboard en klik Refresh now!', 'ok');
+    btn.textContent = 'Klaar!';
+
+  } catch(e){
+    log(`Fout: ${e.message}`, 'err');
+    btn.disabled = false;
+    btn.textContent = 'Opnieuw proberen';
+  }
+}
+</script>
+</body>
+</html>
