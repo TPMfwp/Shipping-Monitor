@@ -17,38 +17,27 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
 .btn{border-radius:10px;padding:7px 14px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid #d2d2d7;background:white;color:#1d1d1f;}
 .btn:hover{background:#f5f5f7;}
 .rlabel{font-size:12px;color:#86868b;}
-
-/* ALERT BANNER */
 .abanner{background:#fff0f0;border:1px solid #ffcccc;border-radius:12px;padding:14px 20px;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;gap:12px;}
 .abanner.hidden{display:none;}
 .atext{font-size:14px;font-weight:600;color:#c0392b;}
 .abtn{background:#ff3b30;color:white;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:500;cursor:pointer;}
-
-/* STATS */
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.5rem;}
 @media(max-width:600px){.stats{grid-template-columns:repeat(2,1fr);}}
 .stat{background:white;border-radius:16px;padding:1.25rem;border:1px solid rgba(0,0,0,0.06);cursor:pointer;transition:border-color 0.15s;}
 .stat:hover{border-color:#0071e3;}
-.stat.active{border:2px solid #0071e3;}
 .stat .lbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#86868b;margin-bottom:8px;}
 .stat .val{font-size:36px;font-weight:600;letter-spacing:-1.5px;line-height:1;}
 .stat .sub{font-size:11px;color:#86868b;margin-top:4px;}
-
-/* TOOLBAR */
 .toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px;}
 .tright{display:flex;gap:8px;align-items:center;}
 select.ssel{border:1px solid #d2d2d7;border-radius:10px;padding:6px 12px;font-size:13px;background:white;outline:none;color:#1d1d1f;}
 input.srch{border:1px solid #d2d2d7;border-radius:10px;padding:7px 12px;font-size:13px;background:white;outline:none;width:200px;color:#1d1d1f;}
 input.srch:focus{border-color:#0071e3;}
 .count-label{font-size:12px;color:#86868b;}
-
-/* TABLE */
 .tcard{background:white;border-radius:16px;border:1px solid rgba(0,0,0,0.06);overflow:hidden;}
 .thead{display:grid;grid-template-columns:28px 110px 1fr 160px 120px 65px 75px;gap:8px;padding:10px 20px;background:#f5f5f7;border-bottom:1px solid #e5e5ea;}
 .th{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#86868b;cursor:pointer;display:flex;align-items:center;gap:3px;user-select:none;}
 .th:hover{color:#0071e3;}
-.th.asc::after{content:' ↑';font-size:10px;}
-.th.desc::after{content:' ↓';font-size:10px;}
 .tbody{max-height:540px;overflow-y:auto;}
 .tr{display:grid;grid-template-columns:28px 110px 1fr 160px 120px 65px 75px;gap:8px;padding:11px 20px;border-bottom:1px solid #f2f2f7;align-items:center;}
 .tr:last-child{border-bottom:none;}
@@ -56,14 +45,12 @@ input.srch:focus{border-color:#0071e3;}
 .tr.red{background:#fff5f5;}
 .tr.red:hover{background:#fff0f0;}
 .tr.orange{background:#fffbf5;}
-
 .dot{width:8px;height:8px;border-radius:50%;}
 .dot.red{background:#ff3b30;animation:p 1.5s infinite;}
 .dot.orange{background:#ff9500;}
 .dot.green{background:#34c759;}
 .dot.blue{background:#0071e3;}
 .dot.gray{background:#c7c7cc;}
-
 .onum{font-size:13px;font-weight:600;color:#0071e3;}
 .cname{font-size:13px;color:#1d1d1f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .sbadge{font-size:10px;font-weight:600;background:#e8f4ff;color:#0055b8;padding:2px 7px;border-radius:20px;display:inline-block;margin-top:2px;}
@@ -84,8 +71,6 @@ input.srch:focus{border-color:#0071e3;}
 .pager{display:flex;align-items:center;justify-content:center;gap:12px;padding:1rem;font-size:12px;color:#86868b;}
 .pbtn{border:1px solid #d2d2d7;border-radius:8px;padding:5px 12px;font-size:12px;background:white;cursor:pointer;}
 .pbtn:disabled{opacity:0.4;cursor:not-allowed;}
-
-/* SETUP */
 .setup{background:white;border-radius:16px;border:1px solid rgba(0,0,0,0.06);padding:2rem;max-width:480px;margin:3rem auto;}
 .setup h2{font-size:18px;font-weight:600;margin-bottom:6px;}
 .setup p{font-size:13px;color:#86868b;margin-bottom:1.5rem;line-height:1.6;}
@@ -118,7 +103,7 @@ input.srch:focus{border-color:#0071e3;}
     </div>
     <div class="hright">
       <span class="pulse"></span>
-      <span class="rlabel" id="rlabel">Auto-refresh every 60s</span>
+      <span class="rlabel" id="rlabel">Auto-refresh elke 60s</span>
       <button class="btn" onclick="loadData()">Refresh now</button>
       <button class="btn" onclick="resetSetup()" style="color:#86868b;">Settings</button>
     </div>
@@ -130,7 +115,7 @@ input.srch:focus{border-color:#0071e3;}
   </div>
 
   <div class="stats">
-    <div class="stat" id="stat-alert" onclick="showAlerts()">
+    <div class="stat" onclick="showAlerts()">
       <div class="lbl">Actie vereist</div>
       <div class="val" id="s-alert" style="color:#ff3b30;">—</div>
       <div class="sub">label stuck of exception</div>
@@ -180,54 +165,55 @@ input.srch:focus{border-color:#0071e3;}
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
-let sb = null, all = [], filtered = [], curFilter = 'all', curPage = 0, sortCol = 'days', sortDir = 'desc';
-const PAGE = 100;
-const CUTOFF = new Date('2026-03-10');
+let sb=null,all=[],filtered=[],curFilter='all',curPage=0,sortCol='days',sortDir='desc';
+const PAGE=100;
+const CUTOFF=new Date('2026-03-10');
 
-function daysSince(d){ if(!d) return 0; return Math.floor((Date.now()-new Date(d))/86400000); }
+function daysSince(d){if(!d)return 0;return Math.floor((Date.now()-new Date(d))/86400000);}
 function timeAgo(d){
-  if(!d) return '—';
-  const m = Math.floor((Date.now()-new Date(d))/60000);
-  if(m<1) return 'zojuist'; if(m<60) return m+'m'; 
-  const h=Math.floor(m/60); if(h<24) return h+'u';
+  if(!d)return '—';
+  const m=Math.floor((Date.now()-new Date(d))/60000);
+  if(m<1)return 'zojuist';if(m<60)return m+'m';
+  const h=Math.floor(m/60);if(h<24)return h+'u';
   return Math.floor(h/24)+'d';
 }
-
-function isNewOrder(d){ return new Date(d.order_date||d.fulfillment_date||0) >= CUTOFF; }
+function isNewOrder(d){return new Date(d.order_date||d.fulfillment_date||0)>=CUTOFF;}
 
 function getAlert(d){
-  if(!isNewOrder(d)) return null;
-  const days = daysSince(d.fulfillment_date||d.order_date);
-  if(d.status==='EXCEPTION'||d.status==='EXPIRED'||d.status==='FAILED_ATTEMPT') return 'red';
-  if((d.status==='PENDING'||d.status==='INFO_RECEIVED') && days>=3) return 'red';
-  if((d.status==='IN_TRANSIT'||d.status==='OUT_FOR_DELIVERY') && days>14) return 'orange';
+  if(!isNewOrder(d))return null;
+  const tn=d.tracking_number||'';
+  const hasYT=tn.startsWith('YT')||tn.startsWith('yt');
+  const days=daysSince(d.fulfillment_date||d.order_date);
+  if(d.status==='EXCEPTION'||d.status==='EXPIRED'||d.status==='FAILED_ATTEMPT')return 'red';
+  if(hasYT&&(d.status==='PENDING'||d.status==='INFO_RECEIVED')&&days>=3)return 'red';
+  if(hasYT&&(d.status==='IN_TRANSIT'||d.status==='OUT_FOR_DELIVERY')&&days>14)return 'orange';
   return null;
 }
 
 function getBadge(d){
-  const s = d.status||'UNKNOWN';
-  const labels = {PENDING:'Label aangemaakt',INFO_RECEIVED:'Info ontvangen',IN_TRANSIT:'Onderweg',OUT_FOR_DELIVERY:'Uit voor levering',DELIVERED:'Afgeleverd',EXCEPTION:'Uitzondering',EXPIRED:'Verlopen',FAILED_ATTEMPT:'Mislukte poging',UNKNOWN:'Onbekend'};
-  const cls = {PENDING:'b-orange',INFO_RECEIVED:'b-orange',IN_TRANSIT:'b-blue',OUT_FOR_DELIVERY:'b-blue',DELIVERED:'b-green',EXCEPTION:'b-red',EXPIRED:'b-red',FAILED_ATTEMPT:'b-red',UNKNOWN:'b-gray'};
+  const s=d.status||'UNKNOWN';
+  const labels={PENDING:'Label aangemaakt',INFO_RECEIVED:'Info ontvangen',IN_TRANSIT:'Onderweg',OUT_FOR_DELIVERY:'Uit voor levering',DELIVERED:'Afgeleverd',EXCEPTION:'Uitzondering',EXPIRED:'Verlopen',FAILED_ATTEMPT:'Mislukte poging',UNKNOWN:'Onbekend'};
+  const cls={PENDING:'b-orange',INFO_RECEIVED:'b-orange',IN_TRANSIT:'b-blue',OUT_FOR_DELIVERY:'b-blue',DELIVERED:'b-green',EXCEPTION:'b-red',EXPIRED:'b-red',FAILED_ATTEMPT:'b-red',UNKNOWN:'b-gray'};
   return `<span class="badge ${cls[s]||'b-gray'}"><span class="bd"></span>${labels[s]||s}</span>`;
 }
 
 function getDot(d){
-  const a = getAlert(d);
-  if(a==='red') return '<span class="dot red"></span>';
-  if(a==='orange') return '<span class="dot orange"></span>';
-  const s = d.status;
-  if(s==='DELIVERED') return '<span class="dot green"></span>';
-  if(s==='IN_TRANSIT'||s==='OUT_FOR_DELIVERY') return '<span class="dot blue"></span>';
+  const a=getAlert(d);
+  if(a==='red')return '<span class="dot red"></span>';
+  if(a==='orange')return '<span class="dot orange"></span>';
+  const s=d.status;
+  if(s==='DELIVERED')return '<span class="dot green"></span>';
+  if(s==='IN_TRANSIT'||s==='OUT_FOR_DELIVERY')return '<span class="dot blue"></span>';
   return '<span class="dot gray"></span>';
 }
 
 function saveSetup(){
-  const u=document.getElementById('su').value.trim(), k=document.getElementById('sk').value.trim();
+  const u=document.getElementById('su').value.trim(),k=document.getElementById('sk').value.trim();
   if(!u||!k){alert('Vul beide velden in.');return;}
-  localStorage.setItem('sb_url',u); localStorage.setItem('sb_key',k);
+  localStorage.setItem('sb_url',u);localStorage.setItem('sb_key',k);
   initSB(u,k);
 }
-function resetSetup(){ document.getElementById('main-view').style.display='none'; document.getElementById('setup-view').style.display='block'; }
+function resetSetup(){document.getElementById('main-view').style.display='none';document.getElementById('setup-view').style.display='block';}
 function initSB(u,k){
   sb=window.supabase.createClient(u,k);
   document.getElementById('setup-view').style.display='none';
@@ -237,16 +223,16 @@ function initSB(u,k){
 }
 
 async function loadData(){
-  if(!sb) return;
+  if(!sb)return;
   document.getElementById('rlabel').textContent='Verversen...';
   try{
-    let data=[], from=0;
+    let data=[],from=0;
     while(true){
-      const {data:batch,error}=await sb.from('shipments').select('*').range(from,from+999).order('order_date',{ascending:false});
-      if(error) throw error;
-      if(!batch||batch.length===0) break;
+      const{data:batch,error}=await sb.from('shipments').select('*').range(from,from+999).order('order_date',{ascending:false});
+      if(error)throw error;
+      if(!batch||batch.length===0)break;
       data=data.concat(batch);
-      if(batch.length<1000) break;
+      if(batch.length<1000)break;
       from+=1000;
     }
     all=data;
@@ -255,14 +241,13 @@ async function loadData(){
     applyFilters();
     document.getElementById('sublabel').textContent=`${all.length} zendingen — bijgewerkt om ${new Date().toLocaleTimeString()}`;
     document.getElementById('rlabel').textContent='Auto-refresh elke 60s';
-  }catch(e){ document.getElementById('rlabel').textContent='Fout: '+e.message; }
+  }catch(e){document.getElementById('rlabel').textContent='Fout: '+e.message;}
 }
 
 function updateStats(){
-  const newOrders = all.filter(isNewOrder);
-  const alerts = newOrders.filter(d=>getAlert(d)==='red');
-  const transit = all.filter(d=>d.status==='IN_TRANSIT'||d.status==='OUT_FOR_DELIVERY');
-  const delivered = all.filter(d=>d.status==='DELIVERED');
+  const alerts=all.filter(d=>getAlert(d)==='red');
+  const transit=all.filter(d=>d.status==='IN_TRANSIT'||d.status==='OUT_FOR_DELIVERY');
+  const delivered=all.filter(d=>d.status==='DELIVERED');
   document.getElementById('s-alert').textContent=alerts.length;
   document.getElementById('s-transit').textContent=transit.length;
   document.getElementById('s-delivered').textContent=delivered.length;
@@ -271,17 +256,17 @@ function updateStats(){
   if(alerts.length>0){
     banner.classList.remove('hidden');
     document.getElementById('atext').textContent=`⚠ ${alerts.length} orders hebben actie nodig — label stuck of uitzondering`;
-  } else { banner.classList.add('hidden'); }
+  }else{banner.classList.add('hidden');}
 }
 
 function updateStores(){
   const stores=[...new Set(all.map(d=>d.store_name).filter(Boolean))].sort();
-  const sel=document.getElementById('ssel'), cur=sel.value;
+  const sel=document.getElementById('ssel'),cur=sel.value;
   sel.innerHTML='<option value="all">Alle winkels</option>'+stores.map(s=>`<option value="${s}"${cur===s?' selected':''}>${s}</option>`).join('');
 }
 
-function showAlerts(){ curFilter='alert'; curPage=0; applyFilters(); }
-function filterStatus(f){ curFilter=f; curPage=0; applyFilters(); }
+function showAlerts(){curFilter='alert';curPage=0;applyFilters();}
+function filterStatus(f){curFilter=f;curPage=0;applyFilters();}
 
 function applyFilters(){
   const q=document.getElementById('srch').value.toLowerCase();
@@ -290,38 +275,37 @@ function applyFilters(){
     const ms=store==='all'||d.store_name===store;
     const mq=!q||d.order_number?.toLowerCase().includes(q)||d.customer_name?.toLowerCase().includes(q)||d.tracking_number?.toLowerCase().includes(q);
     let mf=true;
-    if(curFilter==='alert') mf=getAlert(d)==='red';
-    else if(curFilter==='transit') mf=d.status==='IN_TRANSIT'||d.status==='OUT_FOR_DELIVERY';
-    else if(curFilter==='delivered') mf=d.status==='DELIVERED';
+    if(curFilter==='alert')mf=getAlert(d)==='red';
+    else if(curFilter==='transit')mf=d.status==='IN_TRANSIT'||d.status==='OUT_FOR_DELIVERY';
+    else if(curFilter==='delivered')mf=d.status==='DELIVERED';
     return mf&&ms&&mq;
   });
   sortData();
 }
 
 function sortBy(col){
-  if(sortCol===col) sortDir=sortDir==='asc'?'desc':'asc';
-  else{ sortCol=col; sortDir=col==='days'?'desc':'asc'; }
-  document.querySelectorAll('.th').forEach(t=>t.className='th');
-  curPage=0; sortData();
+  if(sortCol===col)sortDir=sortDir==='asc'?'desc':'asc';
+  else{sortCol=col;sortDir=col==='days'?'desc':'asc';}
+  curPage=0;sortData();
 }
 
 function sortData(){
   filtered.sort((a,b)=>{
     let av,bv;
-    if(sortCol==='days'){ av=daysSince(a.fulfillment_date||a.order_date); bv=daysSince(b.fulfillment_date||b.order_date); }
-    else{ av=(a[sortCol]||'').toLowerCase(); bv=(b[sortCol]||'').toLowerCase(); }
-    if(av<bv) return sortDir==='asc'?-1:1;
-    if(av>bv) return sortDir==='asc'?1:-1;
+    if(sortCol==='days'){av=daysSince(a.fulfillment_date||a.order_date);bv=daysSince(b.fulfillment_date||b.order_date);}
+    else{av=(a[sortCol]||'').toLowerCase();bv=(b[sortCol]||'').toLowerCase();}
+    if(av<bv)return sortDir==='asc'?-1:1;
+    if(av>bv)return sortDir==='asc'?1:-1;
     return 0;
   });
   renderTable();
 }
 
 function renderTable(){
-  const start=curPage*PAGE, page=filtered.slice(start,start+PAGE);
+  const start=curPage*PAGE,page=filtered.slice(start,start+PAGE);
   document.getElementById('count-label').textContent=`${filtered.length} resultaten`;
   const el=document.getElementById('tbody');
-  if(!page.length){ el.innerHTML='<div class="empty">Geen zendingen gevonden.</div>'; renderPager(); return; }
+  if(!page.length){el.innerHTML='<div class="empty">Geen zendingen gevonden.</div>';renderPager();return;}
   el.innerHTML=page.map(d=>{
     const days=daysSince(d.fulfillment_date||d.order_date);
     const alert=getAlert(d);
@@ -344,17 +328,17 @@ function renderTable(){
 }
 
 function renderPager(){
-  const pages=Math.ceil(filtered.length/PAGE), el=document.getElementById('pager');
+  const pages=Math.ceil(filtered.length/PAGE),el=document.getElementById('pager');
   if(pages<=1){el.innerHTML='';return;}
   el.innerHTML=`<button class="pbtn" onclick="goPage(${curPage-1})" ${curPage===0?'disabled':''}>← Vorige</button>
     <span>Pagina ${curPage+1} van ${pages}</span>
     <button class="pbtn" onclick="goPage(${curPage+1})" ${curPage>=pages-1?'disabled':''}>Volgende →</button>`;
 }
-function goPage(p){ curPage=p; renderTable(); document.querySelector('.tbody')?.scrollTo(0,0); }
+function goPage(p){curPage=p;renderTable();document.querySelector('.tbody')?.scrollTo(0,0);}
 
 window.addEventListener('DOMContentLoaded',()=>{
-  const u=localStorage.getItem('sb_url'), k=localStorage.getItem('sb_key');
-  if(u&&k) initSB(u,k);
+  const u=localStorage.getItem('sb_url'),k=localStorage.getItem('sb_key');
+  if(u&&k)initSB(u,k);
 });
 </script>
 </body>
