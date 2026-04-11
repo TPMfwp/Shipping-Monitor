@@ -14,6 +14,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
 .refresh-info{display:flex;align-items:center;gap:8px;font-size:12px;color:#86868b;}
 .pulse{width:7px;height:7px;border-radius:50%;background:#34c759;animation:pulse 2s infinite;flex-shrink:0;}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+.btn{border-radius:10px;padding:7px 14px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid #d2d2d7;background:white;color:#1d1d1f;}
+.btn:hover{background:#f5f5f7;}
+.alert-banner{background:#fff0f0;border:1px solid #ffcccc;border-radius:12px;padding:12px 16px;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.alert-banner.hidden{display:none;}
+.alert-text{font-size:13px;color:#c0392b;font-weight:500;}
+.alert-btn{background:#ff3b30;color:white;border:none;border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer;}
 .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:1.5rem;}
 @media(max-width:700px){.stats{grid-template-columns:repeat(2,1fr);}}
 .stat{background:white;border-radius:16px;padding:1.25rem;border:1px solid rgba(0,0,0,0.06);}
@@ -26,43 +32,54 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
 .pill{border-radius:20px;padding:5px 14px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid #d2d2d7;background:white;color:#1d1d1f;transition:all 0.15s;}
 .pill:hover{border-color:#0071e3;color:#0071e3;}
 .pill.active{background:#0071e3;color:white;border-color:#0071e3;}
-.store-select{border:1px solid #d2d2d7;border-radius:10px;padding:6px 12px;font-size:13px;background:white;outline:none;color:#1d1d1f;}
+.right-tools{display:flex;gap:8px;align-items:center;}
+select.store-sel{border:1px solid #d2d2d7;border-radius:10px;padding:6px 12px;font-size:13px;background:white;outline:none;color:#1d1d1f;}
 input.search{border:1px solid #d2d2d7;border-radius:10px;padding:7px 12px;font-size:13px;background:white;outline:none;width:200px;color:#1d1d1f;}
 input.search:focus{border-color:#0071e3;}
 .table-card{background:white;border-radius:16px;border:1px solid rgba(0,0,0,0.06);overflow:hidden;}
-.thead{display:grid;grid-template-columns:40px 120px 1fr 170px 140px 70px 80px;gap:8px;padding:12px 20px;background:#f5f5f7;border-bottom:1px solid #e5e5ea;}
-.thead span{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#86868b;}
-.tbody{max-height:520px;overflow-y:auto;}
-.tr{display:grid;grid-template-columns:40px 120px 1fr 170px 140px 70px 80px;gap:8px;padding:12px 20px;border-bottom:1px solid #f2f2f7;align-items:center;transition:background 0.1s;cursor:pointer;}
+.thead{display:grid;grid-template-columns:32px 110px 1fr 160px 130px 70px 80px;gap:8px;padding:10px 20px;background:#f5f5f7;border-bottom:1px solid #e5e5ea;}
+.th{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#86868b;cursor:pointer;user-select:none;display:flex;align-items:center;gap:4px;}
+.th:hover{color:#1d1d1f;}
+.th.sorted{color:#0071e3;}
+.sort-arrow{font-size:10px;}
+.tbody{max-height:560px;overflow-y:auto;}
+.tr{display:grid;grid-template-columns:32px 110px 1fr 160px 130px 70px 80px;gap:8px;padding:11px 20px;border-bottom:1px solid #f2f2f7;align-items:center;transition:background 0.1s;}
 .tr:last-child{border-bottom:none;}
 .tr:hover{background:#f9f9fb;}
 .tr.alert{background:#fff8f5;}
 .tr.alert:hover{background:#fff3ee;}
-.alert-dot{width:8px;height:8px;border-radius:50%;background:#ff3b30;animation:pulse 1.5s infinite;}
-.ok-dot{width:8px;height:8px;border-radius:50%;background:#34c759;}
-.order{font-size:13px;font-weight:600;color:#0071e3;}
-.name{font-size:13px;color:#1d1d1f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.track{font-size:11px;color:#86868b;font-family:'SF Mono',Monaco,Consolas,monospace;}
-.store-badge{font-size:10px;font-weight:600;background:#e8f4ff;color:#0055b8;padding:2px 8px;border-radius:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dot-ok{width:8px;height:8px;border-radius:50%;background:#34c759;}
+.dot-alert{width:8px;height:8px;border-radius:50%;background:#ff3b30;animation:pulse 1.5s infinite;}
+.dot-warn{width:8px;height:8px;border-radius:50%;background:#ff9500;}
+.order-num{font-size:13px;font-weight:600;color:#0071e3;}
+.cust{font-size:13px;color:#1d1d1f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.store-badge{font-size:10px;font-weight:600;background:#e8f4ff;color:#0055b8;padding:2px 7px;border-radius:20px;display:inline-block;margin-top:2px;}
+.track-link{font-size:11px;color:#0071e3;font-family:'SF Mono',Monaco,Consolas,monospace;text-decoration:none;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.track-link:hover{text-decoration:underline;}
+.track-plain{font-size:11px;color:#86868b;font-family:'SF Mono',Monaco,Consolas,monospace;}
 .badge{display:inline-flex;align-items:center;gap:5px;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;}
-.dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
-.s-PENDING,.s-INFO_RECEIVED{background:#fff4e0;color:#b8690a;}.s-PENDING .dot,.s-INFO_RECEIVED .dot{background:#ff9500;}
-.s-IN_TRANSIT,.s-OUT_FOR_DELIVERY{background:#e8f4ff;color:#0055b8;}.s-IN_TRANSIT .dot,.s-OUT_FOR_DELIVERY .dot{background:#0071e3;}
-.s-DELIVERED{background:#edfaf1;color:#1a7a3a;}.s-DELIVERED .dot{background:#34c759;}
-.s-EXCEPTION,.s-EXPIRED,.s-FAILED_ATTEMPT{background:#fff0f0;color:#c0392b;}.s-EXCEPTION .dot,.s-EXPIRED .dot,.s-FAILED_ATTEMPT .dot{background:#ff3b30;}
-.s-UNKNOWN{background:#f5f5f7;color:#86868b;}.s-UNKNOWN .dot{background:#86868b;}
-.days{font-size:12px;font-weight:500;text-align:right;}
+.bdot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+.s-PENDING,.s-INFO_RECEIVED{background:#fff4e0;color:#b8690a;}.s-PENDING .bdot,.s-INFO_RECEIVED .bdot{background:#ff9500;}
+.s-IN_TRANSIT,.s-OUT_FOR_DELIVERY{background:#e8f4ff;color:#0055b8;}.s-IN_TRANSIT .bdot,.s-OUT_FOR_DELIVERY .bdot{background:#0071e3;}
+.s-DELIVERED{background:#edfaf1;color:#1a7a3a;}.s-DELIVERED .bdot{background:#34c759;}
+.s-EXCEPTION,.s-EXPIRED,.s-FAILED_ATTEMPT{background:#fff0f0;color:#c0392b;}.s-EXCEPTION .bdot,.s-EXPIRED .bdot,.s-FAILED_ATTEMPT .bdot{background:#ff3b30;}
+.s-UNKNOWN{background:#f5f5f7;color:#86868b;}.s-UNKNOWN .bdot{background:#86868b;}
+.days-col{font-size:12px;font-weight:500;text-align:right;}
 .d-ok{color:#86868b;}.d-warn{color:#ff9500;}.d-danger{color:#ff3b30;font-weight:700;}
-.updated{font-size:11px;color:#86868b;text-align:right;}
+.updated-col{font-size:11px;color:#86868b;text-align:right;}
 .empty{padding:3rem;text-align:center;color:#86868b;font-size:14px;}
+.pagination{display:flex;align-items:center;justify-content:center;gap:12px;padding:1rem;font-size:13px;color:#86868b;}
+.page-btn{border:1px solid #d2d2d7;border-radius:8px;padding:5px 12px;font-size:12px;background:white;cursor:pointer;}
+.page-btn:hover{background:#f5f5f7;}
+.page-btn:disabled{opacity:0.4;cursor:not-allowed;}
 .setup-card{background:white;border-radius:16px;border:1px solid rgba(0,0,0,0.06);padding:2rem;max-width:500px;margin:2rem auto;}
 .setup-card h2{font-size:18px;font-weight:600;margin-bottom:0.5rem;}
 .setup-card p{font-size:13px;color:#86868b;margin-bottom:1.5rem;line-height:1.6;}
+.setup-card label{font-size:12px;color:#86868b;display:block;margin-bottom:4px;}
 .setup-card input{width:100%;border:1px solid #d2d2d7;border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:10px;outline:none;color:#1d1d1f;}
 .setup-card input:focus{border-color:#0071e3;}
 .setup-card button{width:100%;background:#0071e3;color:white;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:500;cursor:pointer;}
 .setup-card button:hover{background:#0077ed;}
-.setup-card label{font-size:12px;color:#86868b;display:block;margin-bottom:4px;}
 </style>
 </head>
 <body>
@@ -71,27 +88,33 @@ input.search:focus{border-color:#0071e3;}
   <div id="setup-view">
     <div class="setup-card">
       <h2>Shipping Monitor</h2>
-      <p>Connect your Supabase database to get started. This is a one-time setup — your keys are saved in your browser.</p>
+      <p>Verbind je Supabase database. Eenmalig — daarna automatisch opgeslagen.</p>
       <label>Supabase Project URL</label>
-      <input id="setup-url" placeholder="https://xxxx.supabase.co" value="https://frxyfmfjtadyxhfogdvt.supabase.co">
+      <input id="setup-url" placeholder="https://xxxx.supabase.co">
       <label>Supabase Publishable Key</label>
-      <input id="setup-key" placeholder="sb_publishable_..." value="sb_publishable_jB_An-4B7CURsn0wiIaCjA_pLuz-3Qd">
-      <button onclick="saveSetup()">Connect dashboard</button>
+      <input id="setup-key" placeholder="sb_publishable_...">
+      <button onclick="saveSetup()">Connect</button>
     </div>
   </div>
 
   <div id="main-view" style="display:none;">
+
     <div class="header">
       <div>
         <h1>Shipping Monitor</h1>
-        <p id="last-updated-label">Loading...</p>
+        <p id="sub-label">Loading...</p>
       </div>
       <div class="refresh-info">
         <span class="pulse"></span>
         <span id="refresh-label">Auto-refresh every 60s</span>
-        <button onclick="loadData()" style="margin-left:8px;border:1px solid #d2d2d7;border-radius:8px;padding:5px 12px;font-size:12px;background:white;cursor:pointer;">Refresh now</button>
-        <button onclick="resetSetup()" style="margin-left:4px;border:1px solid #d2d2d7;border-radius:8px;padding:5px 12px;font-size:12px;background:white;cursor:pointer;color:#86868b;">Settings</button>
+        <button class="btn" onclick="loadData()">Refresh now</button>
+        <button class="btn" onclick="resetSetup()" style="color:#86868b;">Settings</button>
       </div>
+    </div>
+
+    <div class="alert-banner hidden" id="alert-banner">
+      <span class="alert-text" id="alert-text"></span>
+      <button class="alert-btn" onclick="setFilter('alert', document.querySelector('.pill[data-f=alert]'))">View stuck orders</button>
     </div>
 
     <div class="stats">
@@ -104,65 +127,62 @@ input.search:focus{border-color:#0071e3;}
 
     <div class="toolbar">
       <div class="filters">
-        <button class="pill active" onclick="setFilter('all',this)">All</button>
-        <button class="pill" onclick="setFilter('alert',this)">Needs attention</button>
-        <button class="pill" onclick="setFilter('PENDING',this)">Pending</button>
-        <button class="pill" onclick="setFilter('INFO_RECEIVED',this)">Info received</button>
-        <button class="pill" onclick="setFilter('IN_TRANSIT',this)">In transit</button>
-        <button class="pill" onclick="setFilter('EXCEPTION',this)">Exception</button>
-        <button class="pill" onclick="setFilter('DELIVERED',this)">Delivered</button>
+        <button class="pill active" data-f="all" onclick="setFilter('all',this)">All</button>
+        <button class="pill" data-f="alert" onclick="setFilter('alert',this)">Needs attention</button>
+        <button class="pill" data-f="PENDING" onclick="setFilter('PENDING',this)">Pending</button>
+        <button class="pill" data-f="INFO_RECEIVED" onclick="setFilter('INFO_RECEIVED',this)">Info received</button>
+        <button class="pill" data-f="IN_TRANSIT" onclick="setFilter('IN_TRANSIT',this)">In transit</button>
+        <button class="pill" data-f="EXCEPTION" onclick="setFilter('EXCEPTION',this)">Exception</button>
+        <button class="pill" data-f="DELIVERED" onclick="setFilter('DELIVERED',this)">Delivered</button>
       </div>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <select class="store-select" id="store-filter" onchange="render()">
+      <div class="right-tools">
+        <select class="store-sel" id="store-sel" onchange="applyFilters()">
           <option value="all">All stores</option>
         </select>
-        <input class="search" id="search" placeholder="Search..." oninput="render()">
+        <input class="search" id="search" placeholder="Search order, name..." oninput="applyFilters()">
       </div>
     </div>
 
     <div class="table-card">
       <div class="thead">
-        <span></span>
-        <span>Order</span>
-        <span>Customer</span>
-        <span>Tracking</span>
-        <span>Status</span>
-        <span style="text-align:right">Days</span>
-        <span style="text-align:right">Updated</span>
+        <div></div>
+        <div class="th" onclick="sortBy('order_number')"><span>Order</span><span class="sort-arrow" id="sort-order_number"></span></div>
+        <div class="th" onclick="sortBy('customer_name')"><span>Customer</span><span class="sort-arrow" id="sort-customer_name"></span></div>
+        <div class="th">Tracking</div>
+        <div class="th" onclick="sortBy('status')"><span>Status</span><span class="sort-arrow" id="sort-status"></span></div>
+        <div class="th" onclick="sortBy('days')" style="justify-content:flex-end;"><span>Days</span><span class="sort-arrow" id="sort-days"></span></div>
+        <div class="th" style="justify-content:flex-end;">Updated</div>
       </div>
       <div class="tbody" id="tbody">
-        <div class="empty">Loading shipments...</div>
+        <div class="empty">Loading...</div>
       </div>
     </div>
-  </div>
 
+    <div class="pagination" id="pagination"></div>
+
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
 let sbClient = null;
 let allData = [];
+let filtered = [];
 let currentFilter = 'all';
-let refreshTimer = null;
-
-const LABELS = {
-  PENDING:'Pending', INFO_RECEIVED:'Info received', IN_TRANSIT:'In transit',
-  OUT_FOR_DELIVERY:'Out for delivery', DELIVERED:'Delivered',
-  EXCEPTION:'Exception', EXPIRED:'Expired', FAILED_ATTEMPT:'Failed attempt'
-};
+let currentSort = { col: 'days', dir: 'desc' };
+let currentPage = 0;
+const PAGE_SIZE = 100;
+const LABELS = {PENDING:'Pending',INFO_RECEIVED:'Info received',IN_TRANSIT:'In transit',OUT_FOR_DELIVERY:'Out for delivery',DELIVERED:'Delivered',EXCEPTION:'Exception',EXPIRED:'Expired',FAILED_ATTEMPT:'Failed attempt'};
 
 function isAlert(d){
-  const days = daysSince(d.last_updated);
-  return ((d.status==='PENDING'||d.status==='INFO_RECEIVED') && days>4)
-    || d.status==='EXCEPTION' || d.status==='EXPIRED' || d.status==='FAILED_ATTEMPT';
+  const days = daysSince(d.fulfillment_date || d.order_date);
+  return ((d.status==='PENDING'||d.status==='INFO_RECEIVED') && days>4) || d.status==='EXCEPTION' || d.status==='EXPIRED' || d.status==='FAILED_ATTEMPT';
 }
 
 function daysSince(dateStr){
   if(!dateStr) return 0;
-  return Math.floor((Date.now() - new Date(dateStr)) / 86400000);
+  return Math.floor((Date.now()-new Date(dateStr))/86400000);
 }
-
-function dclass(days){ return days>7?'d-danger':days>4?'d-warn':'d-ok'; }
 
 function timeAgo(dateStr){
   if(!dateStr) return '—';
@@ -174,10 +194,12 @@ function timeAgo(dateStr){
   return Math.floor(hrs/24)+'d ago';
 }
 
+function dclass(days){ return days>7?'d-danger':days>4?'d-warn':'d-ok'; }
+
 function saveSetup(){
   const url = document.getElementById('setup-url').value.trim();
   const key = document.getElementById('setup-key').value.trim();
-  if(!url||!key){ alert('Fill in both fields.'); return; }
+  if(!url||!key){ alert('Vul beide velden in.'); return; }
   localStorage.setItem('sb_url', url);
   localStorage.setItem('sb_key', key);
   initSupabase(url, key);
@@ -193,26 +215,29 @@ function initSupabase(url, key){
   document.getElementById('setup-view').style.display='none';
   document.getElementById('main-view').style.display='block';
   loadData();
-  if(refreshTimer) clearInterval(refreshTimer);
-  refreshTimer = setInterval(loadData, 60000);
+  setInterval(loadData, 60000);
 }
 
 async function loadData(){
   if(!sbClient) return;
   document.getElementById('refresh-label').textContent='Refreshing...';
   try {
-    const { data, error } = await sbClient
-      .from('shipments')
-      .select('*')
-      .order('last_updated', { ascending: false })
-      .limit(2000);
-
-    if(error) throw error;
-    allData = data || [];
+    let all = [];
+    let from = 0;
+    const batchSize = 1000;
+    while(true){
+      const { data, error } = await sbClient.from('shipments').select('*').range(from, from+batchSize-1).order('last_updated', {ascending:false});
+      if(error) throw error;
+      if(!data || data.length===0) break;
+      all = all.concat(data);
+      if(data.length < batchSize) break;
+      from += batchSize;
+    }
+    allData = all;
     updateStats();
     updateStoreFilter();
-    render();
-    document.getElementById('last-updated-label').textContent = `${allData.length} shipments — last updated ${new Date().toLocaleTimeString()}`;
+    applyFilters();
+    document.getElementById('sub-label').textContent = `${allData.length} shipments — updated ${new Date().toLocaleTimeString()}`;
     document.getElementById('refresh-label').textContent='Auto-refresh every 60s';
   } catch(e){
     document.getElementById('refresh-label').textContent='Error: '+e.message;
@@ -220,70 +245,147 @@ async function loadData(){
 }
 
 function updateStats(){
+  const alerts = allData.filter(isAlert);
   document.getElementById('s0').textContent = allData.length;
-  document.getElementById('s1').textContent = allData.filter(isAlert).length;
+  document.getElementById('s1').textContent = alerts.length;
   document.getElementById('s2').textContent = allData.filter(d=>d.status==='IN_TRANSIT'||d.status==='OUT_FOR_DELIVERY').length;
   document.getElementById('s3').textContent = allData.filter(d=>d.status==='DELIVERED').length;
   document.getElementById('s4').textContent = allData.filter(d=>d.status==='EXCEPTION').length;
+
+  const banner = document.getElementById('alert-banner');
+  if(alerts.length > 0){
+    banner.classList.remove('hidden');
+    document.getElementById('alert-text').textContent = `⚠ ${alerts.length} orders need attention — stuck or exception`;
+  } else {
+    banner.classList.add('hidden');
+  }
 }
 
 function updateStoreFilter(){
-  const stores = [...new Set(allData.map(d=>d.store_name).filter(Boolean))];
-  const sel = document.getElementById('store-filter');
-  const current = sel.value;
-  sel.innerHTML = '<option value="all">All stores</option>' +
-    stores.map(s=>`<option value="${s}" ${current===s?'selected':''}>${s}</option>`).join('');
-}
-
-function render(){
-  const q = document.getElementById('search').value.toLowerCase();
-  const store = document.getElementById('store-filter').value;
-  let rows = allData.filter(d=>{
-    const mf = currentFilter==='all'||(currentFilter==='alert'&&isAlert(d))||d.status===currentFilter;
-    const ms = store==='all'||d.store_name===store;
-    const mq = !q||d.order_number?.toLowerCase().includes(q)||d.customer_name?.toLowerCase().includes(q)||d.tracking_number?.toLowerCase().includes(q);
-    return mf&&ms&&mq;
-  }).sort((a,b)=>isAlert(b)-isAlert(a)||(new Date(b.last_updated)-new Date(a.last_updated)));
-
-  const el = document.getElementById('tbody');
-  if(!rows.length){ el.innerHTML='<div class="empty">No shipments match this filter.</div>'; return; }
-
-  el.innerHTML = rows.map(d=>{
-    const days = daysSince(d.fulfillment_date||d.order_date);
-    const alert = isAlert(d);
-    const statusKey = d.status||'UNKNOWN';
-    return `<div class="tr${alert?' alert':''}">
-      <div style="display:flex;align-items:center;justify-content:center;">
-        <span class="${alert?'alert-dot':'ok-dot'}"></span>
-      </div>
-      <div class="order">${d.order_number||'—'}</div>
-      <div>
-        <div class="name">${d.customer_name||'—'}</div>
-        <div class="store-badge">${d.store_name||'—'}</div>
-      </div>
-      <div class="track">${d.tracking_number||'—'}</div>
-      <div><span class="badge s-${statusKey}"><span class="dot"></span>${LABELS[statusKey]||statusKey}</span></div>
-      <div class="days ${dclass(days)}">${days}d</div>
-      <div class="updated">${timeAgo(d.last_updated)}</div>
-    </div>`;
-  }).join('');
+  const stores = [...new Set(allData.map(d=>d.store_name).filter(Boolean))].sort();
+  const sel = document.getElementById('store-sel');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="all">All stores</option>' + stores.map(s=>`<option value="${s}"${cur===s?' selected':''}>${s}</option>`).join('');
 }
 
 function setFilter(f, btn){
   currentFilter = f;
   document.querySelectorAll('.pill').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  render();
+  if(btn) btn.classList.add('active');
+  currentPage = 0;
+  applyFilters();
+}
+
+function applyFilters(){
+  const q = document.getElementById('search').value.toLowerCase();
+  const store = document.getElementById('store-sel').value;
+  filtered = allData.filter(d=>{
+    const mf = currentFilter==='all'||(currentFilter==='alert'&&isAlert(d))||d.status===currentFilter;
+    const ms = store==='all'||d.store_name===store;
+    const mq = !q||d.order_number?.toLowerCase().includes(q)||d.customer_name?.toLowerCase().includes(q)||d.tracking_number?.toLowerCase().includes(q);
+    return mf&&ms&&mq;
+  });
+  sortData();
+}
+
+function sortBy(col){
+  if(currentSort.col===col){
+    currentSort.dir = currentSort.dir==='asc'?'desc':'asc';
+  } else {
+    currentSort = {col, dir: col==='days'?'desc':'asc'};
+  }
+  document.querySelectorAll('.sort-arrow').forEach(el=>el.textContent='');
+  const arrow = document.getElementById('sort-'+col);
+  if(arrow) arrow.textContent = currentSort.dir==='asc'?' ↑':' ↓';
+  currentPage = 0;
+  sortData();
+}
+
+function sortData(){
+  const {col, dir} = currentSort;
+  filtered.sort((a,b)=>{
+    let av, bv;
+    if(col==='days'){
+      av = daysSince(a.fulfillment_date||a.order_date);
+      bv = daysSince(b.fulfillment_date||b.order_date);
+    } else if(col==='order_number'){
+      av = a.order_number||'';
+      bv = b.order_number||'';
+    } else if(col==='customer_name'){
+      av = a.customer_name||'';
+      bv = b.customer_name||'';
+    } else if(col==='status'){
+      av = a.status||'';
+      bv = b.status||'';
+    } else {
+      av = a[col]||'';
+      bv = b[col]||'';
+    }
+    if(av<bv) return dir==='asc'?-1:1;
+    if(av>bv) return dir==='asc'?1:-1;
+    return 0;
+  });
+  renderTable();
+}
+
+function renderTable(){
+  const start = currentPage * PAGE_SIZE;
+  const page = filtered.slice(start, start + PAGE_SIZE);
+  const el = document.getElementById('tbody');
+
+  if(!page.length){
+    el.innerHTML = '<div class="empty">No shipments match this filter.</div>';
+    renderPagination();
+    return;
+  }
+
+  el.innerHTML = page.map(d=>{
+    const days = daysSince(d.fulfillment_date||d.order_date);
+    const alert = isAlert(d);
+    const sk = d.status||'UNKNOWN';
+    const trackUrl = d.tracking_number && d.tracking_number!=='Unknown'
+      ? `https://ellisonrowe.com/apps/parcelpanel?nums=${d.tracking_number}`
+      : null;
+    const trackHtml = trackUrl
+      ? `<a class="track-link" href="${trackUrl}" target="_blank">${d.tracking_number}</a>`
+      : `<span class="track-plain">${d.tracking_number||'—'}</span>`;
+    const dotClass = alert ? 'dot-alert' : days > 4 ? 'dot-warn' : 'dot-ok';
+    return `<div class="tr${alert?' alert':''}">
+      <div style="display:flex;align-items:center;justify-content:center;"><span class="${dotClass}"></span></div>
+      <div class="order-num">${d.order_number||'—'}</div>
+      <div><div class="cust">${d.customer_name||'—'}</div><span class="store-badge">${d.store_name||'—'}</span></div>
+      <div>${trackHtml}</div>
+      <div><span class="badge s-${sk}"><span class="bdot"></span>${LABELS[sk]||sk}</span></div>
+      <div class="days-col ${dclass(days)}">${days}d</div>
+      <div class="updated-col">${timeAgo(d.last_updated)}</div>
+    </div>`;
+  }).join('');
+
+  renderPagination();
+}
+
+function renderPagination(){
+  const total = filtered.length;
+  const pages = Math.ceil(total / PAGE_SIZE);
+  const el = document.getElementById('pagination');
+  if(pages<=1){ el.innerHTML=''; return; }
+  el.innerHTML = `
+    <button class="page-btn" onclick="gotoPage(${currentPage-1})" ${currentPage===0?'disabled':''}>← Prev</button>
+    <span>Page ${currentPage+1} of ${pages} — ${total} results</span>
+    <button class="page-btn" onclick="gotoPage(${currentPage+1})" ${currentPage>=pages-1?'disabled':''}>Next →</button>
+  `;
+}
+
+function gotoPage(p){
+  currentPage = p;
+  renderTable();
+  document.querySelector('.tbody')?.scrollTo(0,0);
 }
 
 window.addEventListener('DOMContentLoaded', ()=>{
   const url = localStorage.getItem('sb_url');
   const key = localStorage.getItem('sb_key');
-  if(url && key){
-    document.getElementById('setup-url').value = url;
-    document.getElementById('setup-key').value = key;
-    initSupabase(url, key);
-  }
+  if(url && key) initSupabase(url, key);
 });
 </script>
 </body>
