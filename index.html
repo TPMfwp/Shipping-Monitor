@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shipping Monitor</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;background:#f5f5f7;color:#1d1d1f;min-height:100vh;}
+.dash{max-width:1100px;margin:0 auto;padding:2rem 1.5rem;}
+.header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;}
+.header h1{font-size:24px;font-weight:600;letter-spacing:-0.5px;}
+.header p{font-size:12px;color:#86868b;margin-top:3px;}
+.hright{display:flex;align-items:center;gap:8px;}
+.pulse{width:7px;height:7px;border-radius:50%;background:#34c759;animation:pulse 2s infinite;flex-shrink:0;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+.rlabel{font-size:12px;color:#86868b;}
+.btn{border-radius:10px;padding:7px 14px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid #d2d2d7;background:white;color:#1d1d1f;}
+.btn:hover{background:#f5f5f7;}
+.store-tabs{display:flex;gap:6px;margin-bottom:1.5rem;flex-wrap:wrap;align-items:center;}
+.stab{border-radius:20px;padding:6px 16px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid #d2d2d7;background:white;color:#1d1d1f;transition:all 0.15s;}
+.stab:hover{border-color:#0071e3;color:#0071e3;}
+.stab.active{background:#0071e3;color:white;border-color:#0071e3;}
+.add-store-btn{border-radius:20px;padding:6px 14px;font-size:12px;font-weight:500;cursor:pointer;border:1px dashed #d2d2d7;background:transparent;color:#86868b;transition:all 0.15s;}
+.add-store-btn:hover{border-color:#0071e3;color:#0071e3;}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.5rem;}
+@media(max-width:600px){.stats{grid-template-columns:repeat(2,1fr);}}
+.stat{background:white;border-radius:14px;padding:1.1rem 1.25rem;border:1px solid rgba(0,0,0,0.06);}
+.stat .lbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#86868b;margin-bottom:6px;}
+.stat .val{font-size:34px;font-weight:600;letter-spacing:-1px;line-height:1;}
+.sections{display:flex;flex-direction:column;gap:10px;margin-bottom:10px;}
+.section{background:white;border-radius:14px;border:1px solid rgba(0,0,0,0.06);overflow:hidden;}
+.sec-header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;}
+.sec-left{display:flex;align-items:center;gap:10px;}
+.sec-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.sec-dot.red{background:#ff3b30;animation:pulse 1.5s infinite;}
+.sec-dot.amber{background:#ff9500;}
+.sec-dot.green{background:#34c759;}
+.sec-title{font-size:14px;font-weight:500;color:#1d1d1f;}
+.sec-sub{font-size:11px;color:#86868b;margin-top:1px;}
+.sec-count{font-size:24px;font-weight:600;letter-spacing:-0.5px;}
+.sec-count.red{color:#ff3b30;}
+.sec-count.amber{color:#ff9500;}
+.sec-count.green{color:#34c759;}
+.sec-rows{border-top:1px solid #f2f2f7;}
+.srow{display:grid;grid-template-columns:110px 1fr 170px 120px 50px 32px;gap:8px;padding:11px 20px;border-bottom:1px solid #f2f2f7;align-items:center;}
+.srow:last-child{border-bottom:none;}
+.srow:hover{background:#fafafa;}
+.onum{font-size:13px;font-weight:600;color:#0071e3;}
+.cname{font-size:13px;color:#1d1d1f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tlink{font-size:11px;color:#0071e3;font-family:monospace;text-decoration:none;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tlink:hover{text-decoration:underline;}
+.tgray{font-size:11px;color:#86868b;font-family:monospace;}
+.badge{display:inline-flex;align-items:center;gap:4px;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:500;}
+.bd{width:5px;height:5px;border-radius:50%;}
+.b-red{background:#fff0f0;color:#a32d2d;}.b-red .bd{background:#ff3b30;}
+.b-amber{background:#fff4e0;color:#854f0b;}.b-amber .bd{background:#ff9500;}
+.b-blue{background:#e8f4ff;color:#0055b8;}.b-blue .bd{background:#0071e3;}
+.b-green{background:#edfaf1;color:#1a7a3a;}.b-green .bd{background:#34c759;}
+.b-gray{background:#f5f5f7;color:#86868b;}.b-gray .bd{background:#86868b;}
+.dcol{font-size:12px;font-weight:600;text-align:right;}
+.dc-red{color:#ff3b30;}.dc-amber{color:#ff9500;}.dc-ok{color:#86868b;}
+.xbtn{background:none;border:none;cursor:pointer;color:#c7c7cc;font-size:18px;padding:0 4px;line-height:1;border-radius:4px;}
+.xbtn:hover{color:#ff3b30;background:#fff0f0;}
+.allclear{padding:14px 20px;font-size:13px;color:#34c759;font-weight:500;}
+.dismissed-wrap{background:white;border-radius:14px;border:1px solid rgba(0,0,0,0.06);overflow:hidden;margin-bottom:1.5rem;}
+.dismissed-hdr{display:flex;align-items:center;justify-content:space-between;padding:13px 20px;cursor:pointer;user-select:none;}
+.dismissed-hdr:hover{background:#fafafa;}
+.dismissed-hleft{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:#86868b;}
+.dismissed-cnt{font-size:11px;background:#f5f5f7;color:#86868b;border-radius:20px;padding:2px 8px;}
+.dismissed-arrow{font-size:11px;color:#86868b;transition:transform 0.2s;}
+.dismissed-arrow.open{transform:rotate(180deg);}
+.dismissed-rows{border-top:1px solid #f2f2f7;display:none;}
+.dismissed-rows.open{display:block;}
+.drow{display:grid;grid-template-columns:110px 1fr 170px 120px 50px 70px;gap:8px;padding:10px 20px;border-bottom:1px solid #f2f2f7;align-items:center;opacity:0.7;}
+.drow:last-child{border-bottom:none;}
+.restore-btn{font-size:11px;font-weight:500;color:#0071e3;background:none;border:1px solid #d2d2d7;border-radius:6px;padding:3px 8px;cursor:pointer;}
+.restore-btn:hover{background:#e8f4ff;}
+.table-wrap{background:white;border-radius:14px;border:1px solid rgba(0,0,0,0.06);overflow:hidden;}
+.table-header{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid #f2f2f7;}
+.table-title{font-size:13px;font-weight:500;color:#1d1d1f;}
+.table-sub{font-size:12px;color:#86868b;}
+.thead{display:grid;grid-template-columns:24px 110px 1fr 170px 120px 55px 70px;gap:8px;padding:9px 20px;background:#f5f5f7;border-bottom:1px solid #e5e5ea;}
+.th{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#86868b;cursor:pointer;display:flex;align-items:center;gap:3px;}
+.th:hover{color:#1d1d1f;}
+.tbody{max-height:480px;overflow-y:auto;}
+.tr{display:grid;grid-template-columns:24px 110px 1fr 170px 120px 55px 70px;gap:8px;padding:10px 20px;border-bottom:1px solid #f2f2f7;align-items:center;}
+.tr:last-child{border-bottom:none;}
+.tr:hover{background:#fafafa;}
+.dot{width:7px;height:7px;border-radius:50%;}
+.upd{font-size:11px;color:#86868b;text-align:right;}
+.pager{display:flex;align-items:center;justify-content:center;gap:12px;padding:12px;font-size:12px;color:#86868b;border-top:1px solid #f2f2f7;}
+.pbtn{border:1px solid #d2d2d7;border-radius:8px;padding:5px 12px;font-size:12px;background:white;cursor:pointer;}
+.pbtn:disabled{opacity:0.4;cursor:not-allowed;}
+.empty{padding:2rem;text-align:center;color:#86868b;font-size:13px;}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:100;}
+.modal-overlay.hidden{display:none;}
+.modal{background:white;border-radius:16px;padding:2rem;max-width:480px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.2);}
+.modal h2{font-size:18px;font-weight:600;margin-bottom:6px;}
+.modal p{font-size:13px;color:#86868b;margin-bottom:1.25rem;line-height:1.6;}
+.modal .step{display:flex;gap:12px;margin-bottom:12px;align-items:flex-start;}
+.modal .step-num{width:22px;height:22px;border-radius:50%;background:#0071e3;color:white;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+.modal .step-text{font-size:13px;color:#1d1d1f;line-height:1.5;}
+.modal .step-text code{background:#f5f5f7;padding:2px 6px;border-radius:4px;font-size:12px;font-family:monospace;color:#1d1d1f;word-break:break-all;}
+.modal-close{width:100%;margin-top:1.5rem;background:#0071e3;color:white;border:none;border-radius:10px;padding:11px;font-size:14px;font-weight:500;cursor:pointer;}
+</style>
+</head>
+<body>
+<div class="dash">
+
+  <div class="header">
+    <div>
+      <h1>Shipping Monitor</h1>
+      <p id="sublabel">Loading...</p>
+    </div>
+    <div class="hright">
+      <span class="pulse"></span>
+      <span class="rlabel" id="rlabel">Auto-refresh every 60s</span>
+      <button class="btn" onclick="loadData()">Refresh now</button>
+    </div>
+  </div>
+
+  <div class="store-tabs" id="store-tabs">
+    <button class="stab active" data-store="all" onclick="setStore('all',this)">All stores</button>
+    <button class="add-store-btn" onclick="showAddStore()">+ Add store</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="lbl">Action required</div><div class="val" id="s-alert" style="color:#ff3b30;">—</div></div>
+    <div class="stat"><div class="lbl">In transit</div><div class="val" id="s-transit" style="color:#0071e3;">—</div></div>
+    <div class="stat"><div class="lbl">Delivered</div><div class="val" id="s-delivered" style="color:#34c759;">—</div></div>
+    <div class="stat"><div class="lbl">Total</div><div class="val" id="s-total" style="color:#1d1d1f;">—</div></div>
+  </div>
+
+  <div class="sections">
+    <div class="section">
+      <div class="sec-header">
+        <div class="sec-left">
+          <span class="sec-dot red" id="dot1"></span>
+          <div>
+            <div class="sec-title">Label created, not shipped</div>
+            <div class="sec-sub">Tracking exists but no carrier scan after 4+ days — contact supplier</div>
+          </div>
+        </div>
+        <div class="sec-count red" id="count1">—</div>
+      </div>
+      <div id="rows1"></div>
+    </div>
+
+    <div class="section">
+      <div class="sec-header">
+        <div class="sec-left">
+          <span class="sec-dot amber" id="dot2"></span>
+          <div>
+            <div class="sec-title">Delayed in transit</div>
+            <div class="sec-sub">In transit for 15+ days without delivery — monitor or contact supplier</div>
+          </div>
+        </div>
+        <div class="sec-count amber" id="count2">—</div>
+      </div>
+      <div id="rows2"></div>
+    </div>
+
+    <div class="section">
+      <div class="sec-header">
+        <div class="sec-left">
+          <span class="sec-dot red" id="dot3"></span>
+          <div>
+            <div class="sec-title">Exception</div>
+            <div class="sec-sub">Return to sender, failed delivery or lost — contact supplier</div>
+          </div>
+        </div>
+        <div class="sec-count red" id="count3">—</div>
+      </div>
+      <div id="rows3"></div>
+    </div>
+  </div>
+
+  <div class="dismissed-wrap">
+    <div class="dismissed-hdr" onclick="toggleDismissed()">
+      <div class="dismissed-hleft">
+        <span>Dismissed</span>
+        <span class="dismissed-cnt" id="dismissed-cnt">0</span>
+      </div>
+      <span class="dismissed-arrow" id="dismissed-arrow">▼</span>
+    </div>
+    <div class="dismissed-rows" id="dismissed-rows">
+      <div class="empty" id="dismissed-empty">No dismissed orders.</div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <div class="table-header">
+      <div>
+        <div class="table-title">All shipments</div>
+        <div class="table-sub" id="table-sub"></div>
+      </div>
+    </div>
+    <div class="thead">
+      <div></div>
+      <div class="th" onclick="sortBy('order_number')">Order</div>
+      <div class="th" onclick="sortBy('customer_name')">Customer</div>
+      <div class="th">Tracking</div>
+      <div class="th" onclick="sortBy('status')">Status</div>
+      <div class="th" onclick="sortBy('days')" style="justify-content:flex-end;">Days</div>
+      <div class="th" style="justify-content:flex-end;">Updated</div>
+    </div>
+    <div class="tbody" id="tbody"><div class="empty">Loading...</div></div>
+    <div class="pager" id="pager"></div>
+  </div>
+
+</div>
+
+<div class="modal-overlay hidden" id="modal-overlay" onclick="hideAddStore(event)">
+  <div class="modal">
+    <h2>Add a new store</h2>
+    <p>Connect a new Shopify store by setting up a webhook in ParcelPanel. Requires the <strong>Professional plan</strong> or higher for webhook access.</p>
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-text">Open <strong>ParcelPanel</strong> in your new store's Shopify admin</div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-text">Go to <strong>Integrations → Webhooks → Add webhook</strong></div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-text">Set event to <strong>shipment_status / any_update</strong></div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-text">Paste this URL:<br><code>https://frxyfmfjtadyxhfogdvt.supabase.co/functions/v1/webhook</code></div>
+    </div>
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-text">Click <strong>Save</strong> — the new store appears here automatically after the first shipment update.</div>
+    </div>
+    <button class="modal-close" onclick="hideAddStore()">Got it</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+let sb=null,all=[],filtered=[],curStore='all',curPage=0,sortCol='days',sortDir='desc';
+const PAGE=100;
+const CUTOFF=new Date('2026-03-10');
+const LABELS={PENDING:'Pending',INFO_RECEIVED:'Info received',IN_TRANSIT:'In transit',OUT_FOR_DELIVERY:'Out for delivery',DELIVERED:'Delivered',EXCEPTION:'Exception',EXPIRED:'Expired',FAILED_ATTEMPT:'Failed attempt',CANCELLED:'Cancelled',UNKNOWN:'Unknown',READY_FOR_PICKUP:'Ready for pickup',RESOLVED:'Resolved'};
+const BADGE={PENDING:'b-amber',INFO_RECEIVED:'b-amber',IN_TRANSIT:'b-blue',OUT_FOR_DELIVERY:'b-blue',DELIVERED:'b-green',EXCEPTION:'b-red',EXPIRED:'b-red',FAILED_ATTEMPT:'b-red',CANCELLED:'b-gray',UNKNOWN:'b-gray',READY_FOR_PICKUP:'b-blue',RESOLVED:'b-gray'};
+const DOTCLR={PENDING:'#ff9500',INFO_RECEIVED:'#ff9500',IN_TRANSIT:'#0071e3',OUT_FOR_DELIVERY:'#0071e3',DELIVERED:'#34c759',EXCEPTION:'#ff3b30',EXPIRED:'#ff3b30',FAILED_ATTEMPT:'#ff3b30',CANCELLED:'#c7c7cc',UNKNOWN:'#c7c7cc',READY_FOR_PICKUP:'#0071e3',RESOLVED:'#c7c7cc'};
+
+function getDismissed(){try{return JSON.parse(localStorage.getItem('dismissed')||'[]');}catch{return[];}}
+function saveDismissed(arr){localStorage.setItem('dismissed',JSON.stringify(arr));}
+function isDismissed(d){return getDismissed().some(x=>x.id===rowId(d));}
+function rowId(d){return d.order_number+'|'+d.tracking_number;}
+
+function daysSince(d){if(!d)return 0;return Math.floor((Date.now()-new Date(d))/86400000);}
+function timeAgo(d){
+  if(!d)return '—';
+  const m=Math.floor((Date.now()-new Date(d))/60000);
+  if(m<1)return 'just now';if(m<60)return m+'m ago';
+  const h=Math.floor(m/60);if(h<24)return h+'h ago';
+  return Math.floor(h/24)+'d ago';
+}
+function isNew(d){return new Date(d.order_date||d.fulfillment_date||0)>=CUTOFF;}
+function hasYT(d){const t=d.tracking_number||'';return t.startsWith('YT')||t.startsWith('yt');}
+
+function getSection(d){
+  if(d.status==='CANCELLED'||d.status==='RESOLVED')return null;
+  if(!isNew(d)||!hasYT(d))return null;
+  const dismissed=getDismissed();
+  if(dismissed.some(x=>x.id===rowId(d)))return null;
+  const days=daysSince(d.fulfillment_date||d.order_date);
+  const s=d.status||'';
+  if(s==='EXCEPTION'||s==='EXPIRED'||s==='FAILED_ATTEMPT')return 3;
+  if((s==='PENDING'||s==='INFO_RECEIVED')&&days>=4)return 1;
+  if((s==='IN_TRANSIT'||s==='OUT_FOR_DELIVERY')&&days>=15)return 2;
+  return null;
+}
+
+function trackHtml(d){
+  const t=d.tracking_number;
+  if(!t||t==='Unknown')return '<span class="tgray">—</span>';
+  return `<a class="tlink" href="https://ellisonrowe.com/apps/parcelpanel?nums=${t}" target="_blank">${t}</a>`;
+}
+function badgeHtml(d){
+  const s=d.status||'UNKNOWN';
+  return `<span class="badge ${BADGE[s]||'b-gray'}"><span class="bd"></span>${LABELS[s]||s}</span>`;
+}
+
+function dismiss(d){
+  const arr=getDismissed();
+  arr.push({id:rowId(d),order_number:d.order_number,customer_name:d.customer_name,tracking_number:d.tracking_number,status:d.status,fulfillment_date:d.fulfillment_date,order_date:d.order_date,store_name:d.store_name,dismissed_at:new Date().toISOString()});
+  saveDismissed(arr);
+  renderSections();
+  renderDismissed();
+}
+
+function restore(id){
+  const arr=getDismissed().filter(x=>x.id!==id);
+  saveDismissed(arr);
+  renderSections();
+  renderDismissed();
+  renderTable();
+}
+
+function renderSections(){
+  const storeFilter=d=>curStore==='all'||d.store_name===curStore;
+  const s1=all.filter(d=>storeFilter(d)&&getSection(d)===1).sort((a,b)=>daysSince(b.fulfillment_date||b.order_date)-daysSince(a.fulfillment_date||a.order_date));
+  const s2=all.filter(d=>storeFilter(d)&&getSection(d)===2).sort((a,b)=>daysSince(b.fulfillment_date||b.order_date)-daysSince(a.fulfillment_date||a.order_date));
+  const s3=all.filter(d=>storeFilter(d)&&getSection(d)===3).sort((a,b)=>daysSince(b.fulfillment_date||b.order_date)-daysSince(a.fulfillment_date||a.order_date));
+
+  const render=(arr,id,countId,dotId,dotCls)=>{
+    document.getElementById(countId).textContent=arr.length;
+    const dot=document.getElementById(dotId);
+    dot.className='sec-dot '+(arr.length>0?dotCls:'green');
+    const el=document.getElementById(id);
+    if(arr.length===0){
+      el.innerHTML='<div class="allclear">All clear</div>';
+    }else{
+      el.innerHTML='<div class="sec-rows">'+arr.map(d=>{
+        const days=daysSince(d.fulfillment_date||d.order_date);
+        const dc=days>=15?'dc-red':days>=4?'dc-amber':'dc-ok';
+        return `<div class="srow">
+          <div class="onum">${d.order_number||'—'}</div>
+          <div class="cname">${d.customer_name||'—'}</div>
+          <div>${trackHtml(d)}</div>
+          <div>${badgeHtml(d)}</div>
+          <div class="dcol ${dc}">${days}d</div>
+          <button class="xbtn" onclick="dismissById('${rowId(d)}')" title="Dismiss">×</button>
+        </div>`;
+      }).join('')+'</div>';
+    }
+  };
+
+  render(s1,'rows1','count1','dot1','red');
+  render(s2,'rows2','count2','dot2','amber');
+  render(s3,'rows3','count3','dot3','red');
+  document.getElementById('s-alert').textContent=s1.length+s2.length+s3.length;
+}
+
+function dismissById(id){
+  const d=all.find(x=>rowId(x)===id);
+  if(d) dismissRow(d);
+}
+function dismissRow(d){
+  const arr=getDismissed();
+  arr.push({id:rowId(d),order_number:d.order_number,customer_name:d.customer_name,tracking_number:d.tracking_number,status:d.status,fulfillment_date:d.fulfillment_date,order_date:d.order_date,store_name:d.store_name,dismissed_at:new Date().toISOString()});
+  saveDismissed(arr);
+  renderSections();
+  renderDismissed();
+}
+
+function renderDismissed(){
+  const arr=getDismissed().filter(d=>curStore==='all'||d.store_name===curStore);
+  document.getElementById('dismissed-cnt').textContent=arr.length;
+  const el=document.getElementById('dismissed-rows');
+  if(arr.length===0){
+    el.innerHTML='<div class="empty">No dismissed orders.</div>';
+    return;
+  }
+  el.innerHTML=arr.map(d=>{
+    const days=daysSince(d.fulfillment_date||d.order_date);
+    return `<div class="drow">
+      <div class="onum">${d.order_number||'—'}</div>
+      <div class="cname">${d.customer_name||'—'}</div>
+      <div>${d.tracking_number&&d.tracking_number!=='Unknown'?`<span class="tgray">${d.tracking_number}</span>`:'<span class="tgray">—</span>'}</div>
+      <div>${badgeHtml(d)}</div>
+      <div class="dcol dc-ok">${days}d</div>
+      <button class="restore-btn" onclick="restore('${d.id}')">Restore</button>
+    </div>`;
+  }).join('');
+}
+
+function toggleDismissed(){
+  const rows=document.getElementById('dismissed-rows');
+  const arrow=document.getElementById('dismissed-arrow');
+  rows.classList.toggle('open');
+  arrow.classList.toggle('open');
+}
+
+function updateStats(){
+  document.getElementById('s-transit').textContent=all.filter(d=>d.status==='IN_TRANSIT'||d.status==='OUT_FOR_DELIVERY').length;
+  document.getElementById('s-delivered').textContent=all.filter(d=>d.status==='DELIVERED').length;
+  document.getElementById('s-total').textContent=all.length;
+}
+
+function updateStoreTabs(){
+  const stores=[...new Set(all.map(d=>d.store_name).filter(Boolean))].sort();
+  const container=document.getElementById('store-tabs');
+  const addBtn=container.querySelector('.add-store-btn');
+  container.innerHTML='';
+  const allTab=document.createElement('button');
+  allTab.className='stab'+(curStore==='all'?' active':'');
+  allTab.dataset.store='all';
+  allTab.textContent='All stores';
+  allTab.onclick=()=>setStore('all',allTab);
+  container.appendChild(allTab);
+  stores.forEach(s=>{
+    const tab=document.createElement('button');
+    tab.className='stab'+(curStore===s?' active':'');
+    tab.dataset.store=s;
+    tab.textContent=s;
+    tab.onclick=()=>setStore(s,tab);
+    container.appendChild(tab);
+  });
+  container.appendChild(addBtn||createAddBtn());
+}
+
+function createAddBtn(){
+  const b=document.createElement('button');
+  b.className='add-store-btn';
+  b.textContent='+ Add store';
+  b.onclick=showAddStore;
+  return b;
+}
+
+function setStore(store,btn){
+  curStore=store;
+  document.querySelectorAll('.stab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  curPage=0;
+  renderSections();
+  renderDismissed();
+  renderTable();
+}
+
+function sortBy(col){
+  if(sortCol===col)sortDir=sortDir==='asc'?'desc':'asc';
+  else{sortCol=col;sortDir=col==='days'?'desc':'asc';}
+  curPage=0;renderTable();
+}
+
+function renderTable(){
+  filtered=all.filter(d=>curStore==='all'||d.store_name===curStore);
+  filtered.sort((a,b)=>{
+    let av,bv;
+    if(sortCol==='days'){av=daysSince(a.fulfillment_date||a.order_date);bv=daysSince(b.fulfillment_date||b.order_date);}
+    else{av=(a[sortCol]||'').toLowerCase();bv=(b[sortCol]||'').toLowerCase();}
+    if(av<bv)return sortDir==='asc'?-1:1;
+    if(av>bv)return sortDir==='asc'?1:-1;
+    return 0;
+  });
+  document.getElementById('table-sub').textContent=`${filtered.length} shipments`;
+  const start=curPage*PAGE,page=filtered.slice(start,start+PAGE);
+  const el=document.getElementById('tbody');
+  if(!page.length){el.innerHTML='<div class="empty">No shipments found.</div>';renderPager();return;}
+  el.innerHTML=page.map(d=>{
+    const days=daysSince(d.fulfillment_date||d.order_date);
+    const dc=days>=15?'dc-red':days>=7?'dc-amber':'dc-ok';
+    return `<div class="tr">
+      <div style="display:flex;align-items:center;justify-content:center;"><span class="dot" style="background:${DOTCLR[d.status||'UNKNOWN']||'#c7c7cc'};"></span></div>
+      <div class="onum">${d.order_number||'—'}</div>
+      <div class="cname">${d.customer_name||'—'}</div>
+      <div>${trackHtml(d)}</div>
+      <div>${badgeHtml(d)}</div>
+      <div class="dcol ${dc}" style="text-align:right;">${days}d</div>
+      <div class="upd">${timeAgo(d.last_updated)}</div>
+    </div>`;
+  }).join('');
+  renderPager();
+}
+
+function renderPager(){
+  const pages=Math.ceil(filtered.length/PAGE),el=document.getElementById('pager');
+  if(pages<=1){el.innerHTML='';return;}
+  el.innerHTML=`<button class="pbtn" onclick="goPage(${curPage-1})" ${curPage===0?'disabled':''}>← Prev</button>
+    <span>Page ${curPage+1} of ${pages}</span>
+    <button class="pbtn" onclick="goPage(${curPage+1})" ${curPage>=pages-1?'disabled':''}>Next →</button>`;
+}
+function goPage(p){curPage=p;renderTable();document.querySelector('.tbody')?.scrollTo(0,0);}
+
+function showAddStore(){document.getElementById('modal-overlay').classList.remove('hidden');}
+function hideAddStore(e){
+  if(!e||e.target===document.getElementById('modal-overlay'))
+    document.getElementById('modal-overlay').classList.add('hidden');
+}
+
+async function loadData(){
+  if(!sb)return;
+  document.getElementById('rlabel').textContent='Refreshing...';
+  try{
+    let data=[],from=0;
+    while(true){
+      const{data:batch,error}=await sb.from('shipments').select('*').range(from,from+999).order('order_date',{ascending:false});
+      if(error)throw error;
+      if(!batch||!batch.length)break;
+      data=data.concat(batch);
+      if(batch.length<1000)break;
+      from+=1000;
+    }
+    all=data;
+    updateStats();
+    updateStoreTabs();
+    renderSections();
+    renderDismissed();
+    renderTable();
+    document.getElementById('sublabel').textContent=`${all.length} shipments — updated ${new Date().toLocaleTimeString()}`;
+    document.getElementById('rlabel').textContent='Auto-refresh every 60s';
+  }catch(e){document.getElementById('rlabel').textContent='Error: '+e.message;}
+}
+
+window.addEventListener('DOMContentLoaded',()=>{
+  const sb_url='https://frxyfmfjtadyxhfogdvt.supabase.co';
+  const sb_key='sb_publishable_jB_An-4B7CURsn0wiIaCjA_pLuz-3Qd';
+  sb=window.supabase.createClient(sb_url,sb_key);
+  loadData();
+  setInterval(loadData,60000);
+});
+</script>
+</body>
+</html>
