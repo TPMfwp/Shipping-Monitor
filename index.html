@@ -791,35 +791,8 @@ function buildBlocks(header, store, order_number, customer_name, customer_email,
 }
 
 async function notifySlack(d, section){
-  if(!sb)return;
-  const id=rowId(d);
-  const logged=actionLogCache.find(x=>x.id===id);
-  const notified=logged?.slack_notified_sections||[];
-  const sectionKey={1:'label_not_shipped',2:'delayed',3:'exception'}[section];
-  if(notified.includes(sectionKey))return;
-  const webhook=storesCache[d.store_name||''];
-  if(!webhook)return;
-  const sectionHeaders={
-    1:'⏳ Shipment Stuck — Label Created, Not Shipped',
-    2:'🐌 Shipment Delayed — In Transit 15+ Days',
-    3:'⚠️ Shipment Exception — Action Required'
-  };
-  const sectionTexts={
-    1:'This shipment has been on "Info Received" status for 5+ days. Why has this order not been shipped yet? Please provide an update. 🙏',
-    2:'This shipment has been in transit for 15+ days without delivery. Why has this order not been delivered yet? Please provide an update. 🙏',
-    3:'This shipment has an exception status. What happened to this order? Please investigate and provide an update. 🙏'
-  };
-  const orderDate=d.order_date?new Date(d.order_date).toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'}).replace(/\//g,'/'):'—';
-  const tracking=d.tracking_number&&d.tracking_number!=='Unknown'?d.tracking_number:'—';
-  const blocks=buildBlocks(sectionHeaders[section],d.store_name||'—',d.order_number||'—',d.customer_name||'—',d.customer_email||'—',tracking,orderDate,sectionTexts[section]);
-  try{
-    await sendSlack(webhook,blocks,sectionHeaders[section]);
-    const newSections=[...notified,sectionKey];
-    await sb.from('action_log').update({slack_notified_sections:newSections}).eq('id',id);
-    if(logged)logged.slack_notified_sections=newSections;
-  }catch(e){
-    console.warn('Slack notify failed:',e);
-  }
+  // Notifications are now handled server-side in the webhook Edge Function
+  return;
 }
 
 async function renderSlackSettings(){
