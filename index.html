@@ -761,10 +761,16 @@ async function saveStoreWebhook(store_name, slack_webhook_url){
   storesCache[store_name]=slack_webhook_url;
 }
 
+const SLACK_FUNCTION_URL='https://frxyfmfjtadyxhfogdvt.supabase.co/functions/v1/slack-notify';
+
+async function sendSlack(webhook_url, text){
+  const res=await fetch(SLACK_FUNCTION_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({webhook_url,text})});
+  if(!res.ok)throw new Error('slack-notify returned '+res.status);
+}
+
 async function notifySlack(d, section){
   if(!sb)return;
   const id=rowId(d);
-  // Check if already notified
   const logged=actionLogCache.find(x=>x.id===id);
   if(logged&&logged.slack_notified)return;
   const webhook=storesCache[d.store_name||''];
@@ -773,7 +779,7 @@ async function notifySlack(d, section){
   const days=daysSince(d.fulfillment_date||d.order_date);
   const text=`*Shipping alert — ${d.store_name||'Unknown store'}*\n*${sectionLabels[section]||'Action required'}*\nOrder: ${d.order_number||'—'}  |  ${d.customer_name||'—'}\nTracking: ${d.tracking_number&&d.tracking_number!=='Unknown'?d.tracking_number:'—'}\nDays since fulfillment: ${days}`;
   try{
-    await fetch(webhook,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+    await sendSlack(webhook,text);
     await sb.from('action_log').update({slack_notified:true}).eq('id',id);
     if(logged)logged.slack_notified=true;
   }catch(e){
@@ -811,7 +817,7 @@ async function testWebhook(store){
   if(!url){showSlackMsg('Geen webhook URL ingevuld.','#ff3b30');return;}
   showSlackMsg('Bezig met versturen...','#86868b');
   try{
-    await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:`✅ Test melding van Shipping Monitor voor *${store}*. Slack integratie werkt.`})});
+    await sendSlack(url,`✅ Test melding van Shipping Monitor voor *${store}*. Slack integratie werkt.`);
     showSlackMsg('Test melding verstuurd.','#34c759');
   }catch(e){
     showSlackMsg('Fout bij versturen: '+e.message,'#ff3b30');
