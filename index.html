@@ -165,7 +165,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
           <span class="sec-dot red" id="dot1"></span>
           <div>
             <div class="sec-title">Label created, not shipped</div>
-            <div class="sec-sub">Tracking exists but no carrier scan after 4+ days — contact supplier</div>
+            <div class="sec-sub">Tracking exists but no carrier scan after 5+ days — contact supplier</div>
           </div>
         </div>
         <div class="sec-count red" id="count1">—</div>
@@ -254,6 +254,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
     <div style="display:flex;gap:0;margin-bottom:1.5rem;border-bottom:1px solid #f2f2f7;">
       <button id="tab-add" onclick="switchTab('add')" style="flex:1;padding:10px;border:none;background:none;font-size:13px;font-weight:500;color:#0071e3;border-bottom:2px solid #0071e3;cursor:pointer;">Add store</button>
       <button id="tab-remove" onclick="switchTab('remove')" style="flex:1;padding:10px;border:none;background:none;font-size:13px;font-weight:500;color:#86868b;border-bottom:2px solid transparent;cursor:pointer;">Remove store</button>
+      <button id="tab-slack" onclick="switchTab('slack')" style="flex:1;padding:10px;border:none;background:none;font-size:13px;font-weight:500;color:#86868b;border-bottom:2px solid transparent;cursor:pointer;">Slack</button>
     </div>
 
     <div id="tab-add-content">
@@ -278,6 +279,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
       </div>
       <button id="remove-btn" onclick="removeStore()" style="width:100%;background:#ff3b30;color:white;border:none;border-radius:10px;padding:11px;font-size:14px;font-weight:500;cursor:pointer;opacity:0.4;" disabled>Remove store</button>
       <button onclick="hideManageStores()" style="width:100%;margin-top:8px;background:none;color:#86868b;border:1px solid #d2d2d7;border-radius:10px;padding:11px;font-size:14px;cursor:pointer;">Cancel</button>
+    </div>
+
+    <div id="tab-slack-content" style="display:none;">
+      <p style="font-size:13px;color:#86868b;margin-bottom:1.25rem;line-height:1.6;">Per store een Slack webhook instellen. Orders krijgen precies één melding zodra ze voor het eerst in een actie sectie vallen.</p>
+      <div id="slack-store-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:1rem;">
+        <div style="font-size:13px;color:#86868b;">Laden...</div>
+      </div>
+      <div id="slack-msg" style="font-size:12px;margin-top:4px;min-height:18px;"></div>
     </div>
   </div>
 </div>
@@ -320,9 +329,11 @@ async function logAction(d,section){
   if(!sb)return;
   const id=rowId(d);
   if(actionLogCache.some(x=>x.id===id))return;
-  const entry={id,order_number:d.order_number,customer_name:d.customer_name||'',tracking_number:d.tracking_number||'',store_name:d.store_name||'',order_date:d.order_date||null,fulfillment_date:d.fulfillment_date||null,section};
+  const entry={id,order_number:d.order_number,customer_name:d.customer_name||'',tracking_number:d.tracking_number||'',store_name:d.store_name||'',order_date:d.order_date||null,fulfillment_date:d.fulfillment_date||null,section,slack_notified:false};
   await sb.from('action_log').upsert(entry,{onConflict:'id'});
   actionLogCache.push(entry);
+  // Fire Slack notification exactly once
+  notifySlack(d,section);
 }
 async function resolveAction(d){
   if(!sb)return;
@@ -358,7 +369,7 @@ function getSection(d){
   const days=daysSince(d.fulfillment_date||d.order_date);
   const s=d.status||'';
   if(s==='EXCEPTION'||s==='EXPIRED'||s==='FAILED_ATTEMPT')return 3;
-  if((s==='PENDING'||s==='INFO_RECEIVED')&&days>=4)return 1;
+  if((s==='PENDING'||s==='INFO_RECEIVED')&&days>=5)return 1;
   if((s==='IN_TRANSIT'||s==='OUT_FOR_DELIVERY')&&days>=15)return 2;
   return null;
 }
@@ -445,7 +456,7 @@ function renderSections(){
     }else{
       el.innerHTML='<div class="sec-rows">'+arr.map(d=>{
         const days=daysSince(d.fulfillment_date||d.order_date);
-        const dc=days>=15?'dc-red':days>=4?'dc-amber':'dc-ok';
+        const dc=days>=15?'dc-red':days>=5?'dc-amber':'dc-ok';
         const xbtn=showDismiss?`<button class="xbtn dismiss-trigger" data-id="${rowId(d).replace(/"/g,'&quot;')}">×</button>`:'<div></div>';
         return `<div class="srow${showDismiss?'':' solved'}">
           <div class="onum">${d.order_number||'—'}</div>
@@ -632,10 +643,14 @@ function hideManageStores(e){
 function switchTab(tab){
   document.getElementById('tab-add-content').style.display=tab==='add'?'block':'none';
   document.getElementById('tab-remove-content').style.display=tab==='remove'?'block':'none';
-  document.getElementById('tab-add').style.color=tab==='add'?'#0071e3':'#86868b';
-  document.getElementById('tab-add').style.borderBottomColor=tab==='add'?'#0071e3':'transparent';
-  document.getElementById('tab-remove').style.color=tab==='remove'?'#0071e3':'#86868b';
-  document.getElementById('tab-remove').style.borderBottomColor=tab==='remove'?'#0071e3':'transparent';
+  document.getElementById('tab-slack-content').style.display=tab==='slack'?'block':'none';
+  ['add','remove','slack'].forEach(t=>{
+    const el=document.getElementById('tab-'+t);
+    if(!el)return;
+    el.style.color=tab===t?'#0071e3':'#86868b';
+    el.style.borderBottomColor=tab===t?'#0071e3':'transparent';
+  });
+  if(tab==='slack')renderSlackSettings();
 }
 document.addEventListener('change',function(e){
   if(e.target.id==='remove-store-select'){
@@ -695,6 +710,7 @@ async function loadData(){
     all=data;
     await loadDismissed();
     await loadActionLog();
+    await loadStores();
     updateStats();
     updateStoreTabs();
     renderSections();
@@ -727,6 +743,88 @@ function checkPassword(){
 
 window.addEventListener('DOMContentLoaded',()=>{
 });
+
+// ── Slack integration ────────────────────────────────────────────────────────
+
+let storesCache = {}; // store_name -> slack_webhook_url
+
+async function loadStores(){
+  if(!sb)return;
+  const{data}=await sb.from('stores').select('store_name,slack_webhook_url');
+  storesCache={};
+  (data||[]).forEach(r=>{ storesCache[r.store_name]=r.slack_webhook_url||''; });
+}
+
+async function saveStoreWebhook(store_name, slack_webhook_url){
+  if(!sb)return;
+  await sb.from('stores').upsert({store_name, slack_webhook_url},{onConflict:'store_name'});
+  storesCache[store_name]=slack_webhook_url;
+}
+
+async function notifySlack(d, section){
+  if(!sb)return;
+  const id=rowId(d);
+  // Check if already notified
+  const logged=actionLogCache.find(x=>x.id===id);
+  if(logged&&logged.slack_notified)return;
+  const webhook=storesCache[d.store_name||''];
+  if(!webhook)return;
+  const sectionLabels={1:'Label created, not shipped',2:'Delayed in transit',3:'Exception'};
+  const days=daysSince(d.fulfillment_date||d.order_date);
+  const text=`*Shipping alert — ${d.store_name||'Unknown store'}*\n*${sectionLabels[section]||'Action required'}*\nOrder: ${d.order_number||'—'}  |  ${d.customer_name||'—'}\nTracking: ${d.tracking_number&&d.tracking_number!=='Unknown'?d.tracking_number:'—'}\nDays since fulfillment: ${days}`;
+  try{
+    await fetch(webhook,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+    await sb.from('action_log').update({slack_notified:true}).eq('id',id);
+    if(logged)logged.slack_notified=true;
+  }catch(e){
+    console.warn('Slack notify failed:',e);
+  }
+}
+
+async function renderSlackSettings(){
+  const stores=[...new Set(all.map(d=>d.store_name).filter(Boolean))].sort();
+  await loadStores();
+  const el=document.getElementById('slack-store-list');
+  if(!stores.length){el.innerHTML='<div style="font-size:13px;color:#86868b;">Geen stores gevonden.</div>';return;}
+  el.innerHTML=stores.map(s=>`
+    <div style="border:1px solid #e5e5ea;border-radius:10px;padding:12px 14px;">
+      <div style="font-size:12px;font-weight:600;color:#1d1d1f;margin-bottom:6px;">${s}</div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <input id="wh-${cssId(s)}" type="url" placeholder="https://hooks.slack.com/services/..." value="${storesCache[s]||''}"
+          style="flex:1;border:1px solid #d2d2d7;border-radius:8px;padding:7px 10px;font-size:11px;font-family:monospace;outline:none;color:#1d1d1f;">
+        <button onclick="saveWebhook('${s}')" style="padding:7px 12px;border-radius:8px;border:none;background:#0071e3;color:white;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;">Save</button>
+        <button onclick="testWebhook('${s}')" style="padding:7px 12px;border-radius:8px;border:1px solid #d2d2d7;background:white;color:#1d1d1f;font-size:12px;cursor:pointer;white-space:nowrap;">Test</button>
+      </div>
+    </div>`).join('');
+}
+
+function cssId(s){return s.replace(/[^a-zA-Z0-9]/g,'_');}
+
+async function saveWebhook(store){
+  const url=document.getElementById('wh-'+cssId(store))?.value?.trim()||'';
+  await saveStoreWebhook(store,url);
+  showSlackMsg(url?'Opgeslagen.':'Webhook verwijderd.','#34c759');
+}
+
+async function testWebhook(store){
+  const url=document.getElementById('wh-'+cssId(store))?.value?.trim()||'';
+  if(!url){showSlackMsg('Geen webhook URL ingevuld.','#ff3b30');return;}
+  showSlackMsg('Bezig met versturen...','#86868b');
+  try{
+    await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:`✅ Test melding van Shipping Monitor voor *${store}*. Slack integratie werkt.`})});
+    showSlackMsg('Test melding verstuurd.','#34c759');
+  }catch(e){
+    showSlackMsg('Fout bij versturen: '+e.message,'#ff3b30');
+  }
+}
+
+function showSlackMsg(msg,color){
+  const el=document.getElementById('slack-msg');
+  if(!el)return;
+  el.textContent=msg;
+  el.style.color=color;
+  setTimeout(()=>{if(el.textContent===msg)el.textContent='';},4000);
+}
 </script>
 </body>
 </html>
