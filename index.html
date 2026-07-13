@@ -808,7 +808,6 @@ async function notifySlack(d, section){
     3:'This shipment has an exception status. What happened to this order? Please investigate and provide an update. 🙏'
   };
   const orderDate=d.order_date?new Date(d.order_date).toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'}).replace(/\//g,'/'):'—';
-  const line='━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
   const tracking=d.tracking_number&&d.tracking_number!=='Unknown'?d.tracking_number:'—';
   const blocks=buildBlocks(sectionHeaders[section],d.store_name||'—',d.order_number||'—',d.customer_name||'—',tracking,orderDate,sectionTexts[section]);
   try{
