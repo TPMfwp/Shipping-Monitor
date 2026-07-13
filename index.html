@@ -282,11 +282,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
     </div>
 
     <div id="tab-slack-content" style="display:none;">
-      <p style="font-size:13px;color:#86868b;margin-bottom:1.25rem;line-height:1.6;">Per store een Slack webhook instellen. Orders krijgen precies één melding zodra ze voor het eerst in een actie sectie vallen.</p>
-      <div id="slack-store-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:1rem;">
+      <p style="font-size:13px;color:#86868b;margin-bottom:1.25rem;line-height:1.6;">Per store een Slack webhook instellen. Orders krijgen een melding per actie sectie, nooit herhaald.</p>
+      <div class="step"><div class="step-num">1</div><div class="step-text">Ga naar <strong>api.slack.com/apps</strong> → Create an App → From scratch</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">Geef de app een naam en kies je workspace</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">Ga naar <strong>Incoming Webhooks</strong> → zet hem aan → <strong>Add New Webhook to Workspace</strong></div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text">Kies het gewenste channel en kopieer de webhook URL</div></div>
+      <div class="step"><div class="step-num">5</div><div class="step-text">Plak de URL hieronder bij de juiste store → <strong>Save</strong> → <strong>Test</strong></div></div>
+      <div style="margin-top:1.25rem;" id="slack-store-list">
         <div style="font-size:13px;color:#86868b;">Laden...</div>
       </div>
-      <div id="slack-msg" style="font-size:12px;margin-top:4px;min-height:18px;"></div>
+      <div id="slack-msg" style="font-size:12px;margin-top:8px;min-height:18px;"></div>
     </div>
   </div>
 </div>
@@ -805,7 +810,7 @@ async function renderSlackSettings(){
   const el=document.getElementById('slack-store-list');
   if(!stores.length){el.innerHTML='<div style="font-size:13px;color:#86868b;">Geen stores gevonden.</div>';return;}
   el.innerHTML=stores.map(s=>`
-    <div style="border:1px solid #e5e5ea;border-radius:10px;padding:12px 14px;">
+    <div style="border:1px solid #e5e5ea;border-radius:10px;padding:12px 14px;margin-bottom:10px;">
       <div style="font-size:12px;font-weight:600;color:#1d1d1f;margin-bottom:6px;">${s}</div>
       <div style="display:flex;gap:6px;align-items:center;">
         <input id="wh-${cssId(s)}" type="url" placeholder="https://hooks.slack.com/services/..." value="${storesCache[s]||''}"
