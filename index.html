@@ -772,16 +772,28 @@ async function notifySlack(d, section){
   if(!sb)return;
   const id=rowId(d);
   const logged=actionLogCache.find(x=>x.id===id);
-  if(logged&&logged.slack_notified)return;
+  const notified=logged?.slack_notified_sections||[];
+  const sectionKey={1:'label_not_shipped',2:'delayed',3:'exception'}[section];
+  if(notified.includes(sectionKey))return;
   const webhook=storesCache[d.store_name||''];
   if(!webhook)return;
-  const sectionLabels={1:'Label created, not shipped',2:'Delayed in transit',3:'Exception'};
-  const days=daysSince(d.fulfillment_date||d.order_date);
-  const text=`*Shipping alert — ${d.store_name||'Unknown store'}*\n*${sectionLabels[section]||'Action required'}*\nOrder: ${d.order_number||'—'}  |  ${d.customer_name||'—'}\nTracking: ${d.tracking_number&&d.tracking_number!=='Unknown'?d.tracking_number:'—'}\nDays since fulfillment: ${days}`;
+  const sectionHeaders={
+    1:'⏳ Shipment Stuck — Label Created, Not Shipped',
+    2:'🐌 Shipment Delayed — In Transit 15+ Days',
+    3:'⚠️ Shipment Exception — Action Required'
+  };
+  const sectionTexts={
+    1:'This shipment has been on "Info Received" status for 5+ days. Why has this order not been shipped yet? Please provide an update. 🙏',
+    2:'This shipment has been in transit for 15+ days without delivery. Why has this order not been delivered yet? Please provide an update. 🙏',
+    3:'This shipment has an exception status. What happened to this order? Please investigate and provide an update. 🙏'
+  };
+  const orderDate=d.order_date?new Date(d.order_date).toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'}).replace(/\//g,'/'):'—';
+  const text=`${sectionHeaders[section]}\n\nStore: ${d.store_name||'—'}\nOrder: ${d.order_number||'—'}\nCustomer: ${d.customer_name||'—'}\nTracking: ${d.tracking_number&&d.tracking_number!=='Unknown'?d.tracking_number:'—'}\nOrder date: ${orderDate}\n\n${sectionTexts[section]}`;
   try{
     await sendSlack(webhook,text);
-    await sb.from('action_log').update({slack_notified:true}).eq('id',id);
-    if(logged)logged.slack_notified=true;
+    const newSections=[...notified,sectionKey];
+    await sb.from('action_log').update({slack_notified_sections:newSections}).eq('id',id);
+    if(logged)logged.slack_notified_sections=newSections;
   }catch(e){
     console.warn('Slack notify failed:',e);
   }
@@ -817,7 +829,10 @@ async function testWebhook(store){
   if(!url){showSlackMsg('Geen webhook URL ingevuld.','#ff3b30');return;}
   showSlackMsg('Bezig met versturen...','#86868b');
   try{
-    await sendSlack(url,`✅ Test melding van Shipping Monitor voor *${store}*. Slack integratie werkt.`);
+    const today=new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'}).replace(/\//g,'/');
+    await sendSlack(url,`⏳ Shipment Stuck — Label Created, Not Shipped [EXAMPLE]\n\nStore: ${store}\nOrder: #ER971234\nCustomer: Jane Smith\nTracking: YT2609100704258978\nOrder date: ${today}\n\nThis shipment has been on "Info Received" status for 5+ days. Why has this order not been shipped yet? Please provide an update. 🙏`);
+    await sendSlack(url,`🐌 Shipment Delayed — In Transit 15+ Days [EXAMPLE]\n\nStore: ${store}\nOrder: #ER971235\nCustomer: Mary Johnson\nTracking: YT2609100704258979\nOrder date: ${today}\n\nThis shipment has been in transit for 15+ days without delivery. Why has this order not been delivered yet? Please provide an update. 🙏`);
+    await sendSlack(url,`⚠️ Shipment Exception — Action Required [EXAMPLE]\n\nStore: ${store}\nOrder: #ER971236\nCustomer: Susan Williams\nTracking: YT2609100704258980\nOrder date: ${today}\n\nThis shipment has an exception status. What happened to this order? Please investigate and provide an update. 🙏`);
     showSlackMsg('Test melding verstuurd.','#34c759');
   }catch(e){
     showSlackMsg('Fout bij versturen: '+e.message,'#ff3b30');
