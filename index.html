@@ -158,6 +158,61 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
     </div>
   </div>
 
+  <!-- Performance block -->
+  <div id="perf-block" style="background:white;border-radius:14px;border:1px solid rgba(0,0,0,0.06);padding:1.1rem 1.25rem;margin-bottom:1rem;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.9rem;">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#86868b;">Supplier Performance</div>
+      <button onclick="togglePerfSettings()" style="font-size:11px;color:#0071e3;background:none;border:none;cursor:pointer;font-weight:500;">Settings</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+      <div>
+        <div style="font-size:11px;color:#86868b;margin-bottom:3px;">Avg delivery</div>
+        <div id="perf-avg" style="font-size:22px;font-weight:600;letter-spacing:-0.5px;">—</div>
+        <div id="perf-avg-delta" style="font-size:11px;color:#86868b;margin-top:2px;"></div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:#86868b;margin-bottom:3px;">On time</div>
+        <div id="perf-ontime" style="font-size:22px;font-weight:600;letter-spacing:-0.5px;">—</div>
+        <div id="perf-ontime-delta" style="font-size:11px;color:#86868b;margin-top:2px;"></div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:#86868b;margin-bottom:3px;">Exceptions</div>
+        <div id="perf-exc" style="font-size:22px;font-weight:600;letter-spacing:-0.5px;">—</div>
+        <div id="perf-exc-delta" style="font-size:11px;color:#86868b;margin-top:2px;"></div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:#86868b;margin-bottom:3px;">Delivered</div>
+        <div id="perf-delivered" style="font-size:22px;font-weight:600;letter-spacing:-0.5px;">—</div>
+        <div id="perf-delivered-delta" style="font-size:11px;color:#86868b;margin-top:2px;"></div>
+      </div>
+    </div>
+    <!-- Settings panel -->
+    <div id="perf-settings" style="display:none;margin-top:1rem;padding-top:1rem;border-top:1px solid #f2f2f7;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+        <div>
+          <div style="font-size:11px;color:#86868b;margin-bottom:4px;">On time norm (days)</div>
+          <input id="perf-norm" type="number" min="1" max="60" placeholder="e.g. 14" style="width:100%;border:1px solid #d2d2d7;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;">
+        </div>
+        <div>
+          <div style="font-size:11px;color:#86868b;margin-bottom:4px;">Slack webhook (performance alerts)</div>
+          <input id="perf-webhook" type="url" placeholder="https://hooks.slack.com/..." style="width:100%;border:1px solid #d2d2d7;border-radius:8px;padding:7px 10px;font-size:11px;font-family:monospace;outline:none;">
+        </div>
+        <div>
+          <div style="font-size:11px;color:#86868b;margin-bottom:4px;">Alert: on time % below</div>
+          <input id="perf-alert-ontime" type="number" min="0" max="100" placeholder="e.g. 80" style="width:100%;border:1px solid #d2d2d7;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;">
+        </div>
+        <div>
+          <div style="font-size:11px;color:#86868b;margin-bottom:4px;">Alert: exceptions % above</div>
+          <input id="perf-alert-exc" type="number" min="0" max="100" placeholder="e.g. 10" style="width:100%;border:1px solid #d2d2d7;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button onclick="savePerfSettings()" style="padding:7px 16px;border-radius:8px;border:none;background:#0071e3;color:white;font-size:12px;font-weight:500;cursor:pointer;">Save</button>
+        <div id="perf-settings-msg" style="font-size:12px;color:#34c759;"></div>
+      </div>
+    </div>
+  </div>
+
   <div class="sections">
     <div class="section">
       <div class="sec-header">
@@ -567,6 +622,10 @@ function setStore(store,btn){
   renderSections();
   renderDismissed();
   renderTable();
+  renderPerformance();
+  // Close settings panel on store switch
+  const ps=document.getElementById('perf-settings');
+  if(ps)ps.style.display='none';
 }
 
 function setTableFilter(filter){
@@ -716,11 +775,13 @@ async function loadData(){
     await loadDismissed();
     await loadActionLog();
     await loadStores();
+    await loadPerfSettings();
     updateStats();
     updateStoreTabs();
     renderSections();
     renderDismissed();
     renderTable();
+    renderPerformance();
     document.getElementById('sublabel').textContent=`${all.length} shipments — updated ${new Date().toLocaleTimeString()}`;
     document.getElementById('rlabel').textContent='Auto-refresh every 60s';
   }catch(e){document.getElementById('rlabel').textContent='Error: '+e.message;}
@@ -748,6 +809,136 @@ function checkPassword(){
 
 window.addEventListener('DOMContentLoaded',()=>{
 });
+
+// ── Performance ──────────────────────────────────────────────────────────────
+
+let perfSettingsCache = {}; // store_name -> {norm, webhook, alert_ontime, alert_exc}
+
+async function loadPerfSettings(){
+  if(!sb)return;
+  const{data}=await sb.from('stores').select('store_name,perf_norm,perf_webhook,perf_alert_ontime,perf_alert_exc');
+  perfSettingsCache={};
+  (data||[]).forEach(r=>{
+    perfSettingsCache[r.store_name]={
+      norm:r.perf_norm||14,
+      webhook:r.perf_webhook||'',
+      alert_ontime:r.perf_alert_ontime||null,
+      alert_exc:r.perf_alert_exc||null
+    };
+  });
+}
+
+async function savePerfSettings(){
+  const store=curStore==='all'?null:curStore;
+  if(!store){showPerfMsg('Select a store first.');return;}
+  const norm=parseInt(document.getElementById('perf-norm').value)||14;
+  const webhook=document.getElementById('perf-webhook').value.trim();
+  const alert_ontime=parseFloat(document.getElementById('perf-alert-ontime').value)||null;
+  const alert_exc=parseFloat(document.getElementById('perf-alert-exc').value)||null;
+  await sb.from('stores').upsert({store_name:store,perf_norm:norm,perf_webhook:webhook,perf_alert_ontime:alert_ontime,perf_alert_exc:alert_exc},{onConflict:'store_name'});
+  perfSettingsCache[store]={norm,webhook,alert_ontime,alert_exc};
+  showPerfMsg('Saved.');
+  renderPerformance();
+}
+
+function showPerfMsg(msg){
+  const el=document.getElementById('perf-settings-msg');
+  if(!el)return;
+  el.textContent=msg;
+  setTimeout(()=>{if(el.textContent===msg)el.textContent='';},3000);
+}
+
+function togglePerfSettings(){
+  const el=document.getElementById('perf-settings');
+  const visible=el.style.display!=='none';
+  el.style.display=visible?'none':'block';
+  if(!visible)loadPerfSettingsUI();
+}
+
+function loadPerfSettingsUI(){
+  const store=curStore==='all'?null:curStore;
+  if(!store)return;
+  const s=perfSettingsCache[store]||{};
+  document.getElementById('perf-norm').value=s.norm||'';
+  document.getElementById('perf-webhook').value=s.webhook||'';
+  document.getElementById('perf-alert-ontime').value=s.alert_ontime||'';
+  document.getElementById('perf-alert-exc').value=s.alert_exc||'';
+}
+
+function renderPerformance(){
+  const store=curStore;
+  const data=store==='all'?all:all.filter(d=>d.store_name===store);
+  const delivered=data.filter(d=>d.status==='DELIVERED');
+  const exceptions=data.filter(d=>['EXCEPTION','EXPIRED','FAILED_ATTEMPT'].includes(d.status));
+  const norm=(perfSettingsCache[store]||{}).norm||14;
+
+  // Avg delivery time for delivered orders
+  const deliveryTimes=delivered.map(d=>{
+    if(!d.fulfillment_date||!d.last_checkpoint_time)return null;
+    return Math.floor((new Date(d.last_checkpoint_time)-new Date(d.fulfillment_date))/86400000);
+  }).filter(x=>x!==null&&x>=0&&x<=120);
+  const avg=deliveryTimes.length?Math.round(deliveryTimes.reduce((a,b)=>a+b,0)/deliveryTimes.length):null;
+
+  // On time %
+  const onTimeCount=deliveryTimes.filter(d=>d<=norm).length;
+  const onTimePct=deliveryTimes.length?Math.round(onTimeCount/deliveryTimes.length*100):null;
+
+  // Exception %
+  const total=data.filter(d=>d.status&&d.status!=='UNKNOWN').length;
+  const excPct=total?Math.round(exceptions.length/total*100):null;
+
+  // This month vs last month
+  const now=new Date();
+  const thisMonth=d=>new Date(d.fulfillment_date||d.order_date||0).getMonth()===now.getMonth()&&new Date(d.fulfillment_date||d.order_date||0).getFullYear()===now.getFullYear();
+  const lastMonth=d=>{const dt=new Date(d.fulfillment_date||d.order_date||0);const lm=new Date(now.getFullYear(),now.getMonth()-1,1);return dt.getMonth()===lm.getMonth()&&dt.getFullYear()===lm.getFullYear();};
+
+  const deliveredTM=delivered.filter(d=>thisMonth(d));
+  const deliveredLM=delivered.filter(d=>lastMonth(d));
+
+  function avgDays(arr){
+    const times=arr.map(d=>{
+      if(!d.fulfillment_date||!d.last_checkpoint_time)return null;
+      return Math.floor((new Date(d.last_checkpoint_time)-new Date(d.fulfillment_date))/86400000);
+    }).filter(x=>x!==null&&x>=0&&x<=120);
+    return times.length?Math.round(times.reduce((a,b)=>a+b,0)/times.length):null;
+  }
+
+  const avgTM=avgDays(deliveredTM);
+  const avgLM=avgDays(deliveredLM);
+
+  // Update UI
+  document.getElementById('perf-avg').textContent=avg!==null?avg+'d':'—';
+  document.getElementById('perf-ontime').textContent=onTimePct!==null?onTimePct+'%':'—';
+  document.getElementById('perf-exc').textContent=excPct!==null?excPct+'%':'—';
+  document.getElementById('perf-delivered').textContent=delivered.length;
+
+  // Color on time
+  const ontimeEl=document.getElementById('perf-ontime');
+  const alertOntime=(perfSettingsCache[store]||{}).alert_ontime;
+  if(onTimePct!==null&&alertOntime&&onTimePct<alertOntime)ontimeEl.style.color='#ff3b30';
+  else if(onTimePct!==null&&onTimePct>=90)ontimeEl.style.color='#34c759';
+  else ontimeEl.style.color='#1d1d1f';
+
+  // Color exceptions
+  const excEl=document.getElementById('perf-exc');
+  const alertExc=(perfSettingsCache[store]||{}).alert_exc;
+  if(excPct!==null&&alertExc&&excPct>alertExc)excEl.style.color='#ff3b30';
+  else if(excPct!==null&&excPct<=3)excEl.style.color='#34c759';
+  else excEl.style.color='#1d1d1f';
+
+  // Deltas vs last month
+  if(avgTM!==null&&avgLM!==null){
+    const diff=avgTM-avgLM;
+    const el=document.getElementById('perf-avg-delta');
+    el.textContent=(diff>0?'▲ +':diff<0?'▼ ':'')+diff+'d vs last month';
+    el.style.color=diff>0?'#ff3b30':diff<0?'#34c759':'#86868b';
+  } else {
+    document.getElementById('perf-avg-delta').textContent='';
+  }
+  document.getElementById('perf-ontime-delta').textContent=`Norm: ≤${norm}d`;
+  document.getElementById('perf-exc-delta').textContent=exceptions.length+' total';
+  document.getElementById('perf-delivered-delta').textContent=deliveredTM.length+' this month';
+}
 
 // ── Slack integration ────────────────────────────────────────────────────────
 
