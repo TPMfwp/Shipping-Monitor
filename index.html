@@ -208,6 +208,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
       </div>
       <div style="display:flex;gap:8px;align-items:center;">
         <button onclick="savePerfSettings()" style="padding:7px 16px;border-radius:8px;border:none;background:#0071e3;color:white;font-size:12px;font-weight:500;cursor:pointer;">Save</button>
+        <button onclick="testPerfWebhook()" style="padding:7px 16px;border-radius:8px;border:1px solid #d2d2d7;background:white;color:#1d1d1f;font-size:12px;font-weight:500;cursor:pointer;">Test</button>
         <div id="perf-settings-msg" style="font-size:12px;color:#34c759;"></div>
       </div>
     </div>
@@ -846,6 +847,34 @@ function showPerfMsg(msg){
   if(!el)return;
   el.textContent=msg;
   setTimeout(()=>{if(el.textContent===msg)el.textContent='';},3000);
+}
+
+async function testPerfWebhook(){
+  const url=document.getElementById('perf-webhook').value.trim();
+  if(!url){showPerfMsg('Geen webhook URL ingevuld.');return;}
+  const store=curStore==='all'?'Unknown store':curStore;
+  showPerfMsg('Versturen...');
+  try{
+    const avg=document.getElementById('perf-avg').textContent;
+    const ontime=document.getElementById('perf-ontime').textContent;
+    const exc=document.getElementById('perf-exc').textContent;
+    const delivered=document.getElementById('perf-delivered').textContent;
+    const blocks=[
+      {type:'divider'},
+      {type:'section',text:{type:'mrkdwn',text:`*📊 Supplier Performance — ${store}* [TEST]`}},
+      {type:'section',fields:[
+        {type:'mrkdwn',text:`*Avg delivery:*\n${avg}`},
+        {type:'mrkdwn',text:`*On time:*\n${ontime}`},
+        {type:'mrkdwn',text:`*Exceptions:*\n${exc}`},
+        {type:'mrkdwn',text:`*Delivered:*\n${delivered}`}
+      ]},
+      {type:'divider'}
+    ];
+    await sendSlack(url,blocks,`📊 Performance update — ${store}`);
+    showPerfMsg('Test verstuurd.');
+  }catch(e){
+    showPerfMsg('Fout: '+e.message);
+  }
 }
 
 function togglePerfSettings(){
