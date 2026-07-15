@@ -162,7 +162,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
   <div id="perf-block" style="background:white;border-radius:14px;border:1px solid rgba(0,0,0,0.06);padding:1.1rem 1.25rem;margin-bottom:1rem;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.9rem;">
       <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#86868b;">Supplier Performance</div>
-      <button onclick="togglePerfSettings()" style="font-size:11px;color:#0071e3;background:none;border:none;cursor:pointer;font-weight:500;">Settings</button>
+      <button id="perf-settings-btn" onclick="togglePerfSettings()" style="font-size:11px;color:#0071e3;background:none;border:none;cursor:pointer;font-weight:500;">Settings</button>
     </div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
       <div>
@@ -897,6 +897,10 @@ function loadPerfSettingsUI(){
 function renderPerformance(){
   const store=curStore;
   const data=store==='all'?all:all.filter(d=>d.store_name===store);
+  // Hide settings button for All stores
+  const settingsBtn=document.getElementById('perf-settings-btn');
+  if(settingsBtn)settingsBtn.style.display=store==='all'?'none':'block';
+
   const delivered=data.filter(d=>d.status==='DELIVERED');
   const exceptions=data.filter(d=>['EXCEPTION','EXPIRED','FAILED_ATTEMPT'].includes(d.status));
   const norm=(perfSettingsCache[store]||{}).norm||14;
