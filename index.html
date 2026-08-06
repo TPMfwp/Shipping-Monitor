@@ -354,9 +354,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
-let sb=null,all=[],filtered=[],curStore='all',curTableFilter='all',curPage=0,sortCol='days',sortDir='desc';
+let all=[],filtered=[],curStore='all',curTableFilter='all',curPage=0,sortCol='days',sortDir='desc';
 let dismissedCache=[];
 let actionLogCache=[];
+// 2026-08-06: echte Supabase Auth i.p.v. het oude client-side wachtwoordvergelijkingetje (dat was
+// puur cosmetisch — iedereen die de broncode leest, wat op GitHub sowieso al kan, zag het wachtwoord
+// zo staan). sb wordt nu meteen aangemaakt (niet pas na een geslaagd wachtwoord), zodat we ook
+// eerst kunnen checken of er al een geldige sessie is (voorkomt opnieuw inloggen bij elke page load).
+const SUPABASE_URL='https://frxyfmfjtadyxhfogdvt.supabase.co';
+const SUPABASE_KEY='sb_publishable_jB_An-4B7CURsn0wiIaCjA_pLuz-3Qd';
+const AUTH_EMAIL='shipping-monitor@ellisonrowe.internal'; // vast intern account — nooit getoond, alleen het wachtwoord telt voor de gebruiker
+let sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 const PAGE=100;
 const CUTOFF=new Date('2026-03-10');
 const LABELS={PENDING:'Pending',INFO_RECEIVED:'Info received',IN_TRANSIT:'In transit',OUT_FOR_DELIVERY:'Out for delivery',DELIVERED:'Delivered',EXCEPTION:'Exception',EXPIRED:'Expired',FAILED_ATTEMPT:'Failed attempt',CANCELLED:'Cancelled',UNKNOWN:'Unknown',READY_FOR_PICKUP:'Ready for pickup',RESOLVED:'Resolved'};
@@ -795,20 +803,29 @@ document.addEventListener('click', function(e){
   }
 });
 
-function checkPassword(){
+function enterApp(){
+  document.getElementById('password-view').style.display='none';
+  document.getElementById('main-view').style.display='block';
+  loadData();
+  setInterval(loadData,60000);
+}
+
+async function checkPassword(){
   const val=document.getElementById('pw-input').value;
-  if(val==='dtshopecomm'){
-    document.getElementById('password-view').style.display='none';
-    document.getElementById('main-view').style.display='block';
-    sb=window.supabase.createClient('https://frxyfmfjtadyxhfogdvt.supabase.co','sb_publishable_jB_An-4B7CURsn0wiIaCjA_pLuz-3Qd');
-    loadData();
-    setInterval(loadData,60000);
+  document.getElementById('pw-error').style.display='none';
+  const {error}=await sb.auth.signInWithPassword({email:AUTH_EMAIL,password:val});
+  if(!error){
+    enterApp();
   } else {
     document.getElementById('pw-error').style.display='block';
   }
 }
 
-window.addEventListener('DOMContentLoaded',()=>{
+// Als er al een geldige sessie is (van een eerder bezoek, supabase-js bewaart die zelf in
+// localStorage), meteen doorgaan zonder opnieuw om het wachtwoord te vragen.
+window.addEventListener('DOMContentLoaded',async ()=>{
+  const {data:{session}}=await sb.auth.getSession();
+  if(session)enterApp();
 });
 
 // ── Performance ──────────────────────────────────────────────────────────────
