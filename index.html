@@ -318,7 +318,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
       <div class="step"><div class="step-num">1</div><div class="step-text">Open <strong>ParcelPanel</strong> in your new store's Shopify admin</div></div>
       <div class="step"><div class="step-num">2</div><div class="step-text">Go to <strong>Integrations → Webhooks → Add webhook</strong></div></div>
       <div class="step"><div class="step-num">3</div><div class="step-text">Set event to <strong>shipment_status / any_update</strong></div></div>
-      <div class="step"><div class="step-num">4</div><div class="step-text">Paste this URL:<br><code>https://frxyfmfjtadyxhfogdvt.supabase.co/functions/v1/webhook</code></div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text">Paste this URL:<br><code id="webhook-url" style="word-break:break-all;">Loading...</code><br><button onclick="copyWebhookUrl()" id="webhook-copy" style="margin-top:6px;padding:5px 12px;border-radius:8px;border:1px solid #d2d2d7;background:white;color:#1d1d1f;font-size:12px;cursor:pointer;">Copy</button><div style="font-size:11px;color:#86868b;margin-top:6px;">Contains a secret token — don't share it outside the team.</div></div></div>
       <div class="step"><div class="step-num">5</div><div class="step-text">Click <strong>Save</strong> — the store appears automatically after the first update.</div></div>
       <button class="modal-close" onclick="hideManageStores()">Got it</button>
     </div>
@@ -371,6 +371,9 @@ const LABELS={PENDING:'Pending',INFO_RECEIVED:'Info received',IN_TRANSIT:'In tra
 const BADGE={PENDING:'b-amber',INFO_RECEIVED:'b-amber',IN_TRANSIT:'b-blue',OUT_FOR_DELIVERY:'b-blue',DELIVERED:'b-green',EXCEPTION:'b-red',EXPIRED:'b-red',FAILED_ATTEMPT:'b-red',CANCELLED:'b-gray',UNKNOWN:'b-gray',READY_FOR_PICKUP:'b-blue',RESOLVED:'b-gray'};
 const DOTCLR={PENDING:'#ff9500',INFO_RECEIVED:'#ff9500',IN_TRANSIT:'#0071e3',OUT_FOR_DELIVERY:'#0071e3',DELIVERED:'#34c759',EXCEPTION:'#ff3b30',EXPIRED:'#ff3b30',FAILED_ATTEMPT:'#ff3b30',CANCELLED:'#c7c7cc',UNKNOWN:'#c7c7cc',READY_FOR_PICKUP:'#0071e3',RESOLVED:'#c7c7cc'};
 
+// esc: tekst veilig in innerHTML; jsq: string veilig als argument in een onclick="..."
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function jsq(s){return esc(JSON.stringify(String(s??'')));}
 function rowId(d){const t=d.tracking_number&&d.tracking_number!=='Unknown'?d.tracking_number:'NO_TRACK';return (d.order_number||'')+'|'+t;}
 function isDismissed(d){return dismissedCache.some(x=>x.id===rowId(d));}
 
@@ -445,11 +448,11 @@ function getSection(d){
 function trackHtml(d){
   const t=d.tracking_number;
   if(!t||t==='Unknown')return '<span class="tgray">—</span>';
-  return `<a class="tlink" href="https://ellisonrowe.com/apps/parcelpanel?nums=${t}" target="_blank">${t}</a>`;
+  return `<a class="tlink" href="https://ellisonrowe.com/apps/parcelpanel?nums=${encodeURIComponent(t)}" target="_blank">${esc(t)}</a>`;
 }
 function badgeHtml(d){
   const s=d.status||'UNKNOWN';
-  return `<span class="badge ${BADGE[s]||'b-gray'}"><span class="bd"></span>${LABELS[s]||s}</span>`;
+  return `<span class="badge ${BADGE[s]||'b-gray'}"><span class="bd"></span>${LABELS[s]||esc(s)}</span>`;
 }
 
 function storeFiltered(){return curStore==='all'?all:all.filter(d=>d.store_name===curStore);}
@@ -526,10 +529,10 @@ function renderSections(){
       el.innerHTML='<div class="sec-rows">'+arr.map(d=>{
         const days=daysSince(d.fulfillment_date||d.order_date);
         const dc=days>=15?'dc-red':days>=5?'dc-amber':'dc-ok';
-        const xbtn=showDismiss?`<button class="xbtn dismiss-trigger" data-id="${rowId(d).replace(/"/g,'&quot;')}">×</button>`:'<div></div>';
+        const xbtn=showDismiss?`<button class="xbtn dismiss-trigger" data-id="${esc(rowId(d))}">×</button>`:'<div></div>';
         return `<div class="srow${showDismiss?'':' solved'}">
-          <div class="onum">${d.order_number||'—'}</div>
-          <div class="cname">${d.customer_name||'—'}</div>
+          <div class="onum">${esc(d.order_number||'—')}</div>
+          <div class="cname">${esc(d.customer_name||'—')}</div>
           <div>${trackHtml(d)}</div>
           <div>${badgeHtml(d)}</div>
           <div class="dcol ${dc}">${days}d</div>
@@ -552,8 +555,8 @@ function renderSections(){
     document.getElementById('rows-solved').innerHTML=solved.map(d=>{
       const days=daysSince(d.fulfillment_date||d.order_date);
       return `<div class="drow">
-        <div class="onum">${d.order_number||'—'}</div>
-        <div class="cname">${d.customer_name||'—'}</div>
+        <div class="onum">${esc(d.order_number||'—')}</div>
+        <div class="cname">${esc(d.customer_name||'—')}</div>
         <div>${trackHtml(d)}</div>
         <div>${badgeHtml(d)}</div>
         <div class="dcol dc-ok">${days}d</div>
@@ -573,14 +576,14 @@ function renderDismissed(){
   el.innerHTML=arr.map(d=>{
     const days=daysSince(d.fulfillment_date||d.order_date);
     return `<div class="drow">
-      <div class="onum">${d.order_number||'—'}</div>
-      <div class="cname">${d.customer_name||'—'}</div>
-      <div>${d.tracking_number&&d.tracking_number!=='Unknown'?`<span class="tgray">${d.tracking_number}</span>`:'<span class="tgray">—</span>'}</div>
+      <div class="onum">${esc(d.order_number||'—')}</div>
+      <div class="cname">${esc(d.customer_name||'—')}</div>
+      <div>${d.tracking_number&&d.tracking_number!=='Unknown'?`<span class="tgray">${esc(d.tracking_number)}</span>`:'<span class="tgray">—</span>'}</div>
       <div>${badgeHtml(d)}</div>
       <div class="dcol dc-ok">${days}d</div>
       <div style="display:flex;gap:6px;">
-        <button class="restore-btn" onclick="restore(decodeURIComponent('${encodeURIComponent(d.id)}'))">Restore</button>
-        <button class="restore-btn" style="color:#ff3b30;border-color:#ffcccc;" onclick="deletePermanent(decodeURIComponent('${encodeURIComponent(d.id)}'))">Delete</button>
+        <button class="restore-btn" onclick="restore(${jsq(d.id)})">Restore</button>
+        <button class="restore-btn" style="color:#ff3b30;border-color:#ffcccc;" onclick="deletePermanent(${jsq(d.id)})">Delete</button>
       </div>
     </div>`;
   }).join('');
@@ -677,8 +680,8 @@ function renderTable(){
     const dc=days>=15?'dc-red':days>=7?'dc-amber':'dc-ok';
     return `<div class="tr">
       <div style="display:flex;align-items:center;justify-content:center;"><span class="dot" style="background:${DOTCLR[d.status||'UNKNOWN']||'#c7c7cc'};"></span></div>
-      <div class="onum">${d.order_number||'—'}</div>
-      <div class="cname">${d.customer_name||'—'}</div>
+      <div class="onum">${esc(d.order_number||'—')}</div>
+      <div class="cname">${esc(d.customer_name||'—')}</div>
       <div>${trackHtml(d)}</div>
       <div>${badgeHtml(d)}</div>
       <div class="dcol ${dc}" style="text-align:right;">${days}d</div>
@@ -701,13 +704,26 @@ function showManageStores(){
   // Populate store select
   const stores=[...new Set(all.map(d=>d.store_name).filter(Boolean))].sort();
   const sel=document.getElementById('remove-store-select');
-  sel.innerHTML='<option value="">— select a store —</option>'+stores.map(s=>`<option value="${s}">${s}</option>`).join('');
+  sel.innerHTML='<option value="">— select a store —</option>'+stores.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
   document.getElementById('remove-confirm').style.display='none';
   document.getElementById('remove-confirm-input').value='';
   document.getElementById('remove-btn').disabled=true;
   document.getElementById('remove-btn').style.opacity='0.4';
   switchTab('add');
+  loadWebhookUrl();
   document.getElementById('modal-overlay').classList.remove('hidden');
+}
+// Webhook-URL incl. token komt uit app_settings (alleen leesbaar na inloggen), nooit hardcoded in deze openbare file
+async function loadWebhookUrl(){
+  const el=document.getElementById('webhook-url');
+  const{data,error}=await sb.from('app_settings').select('value').eq('key','webhook_token').single();
+  el.textContent=error||!data?'Could not load URL — refresh and try again.':'https://frxyfmfjtadyxhfogdvt.supabase.co/functions/v1/webhook?token='+data.value;
+}
+async function copyWebhookUrl(){
+  const t=document.getElementById('webhook-url').textContent,b=document.getElementById('webhook-copy');
+  if(!t.startsWith('https://'))return;
+  try{await navigator.clipboard.writeText(t);b.textContent='Copied';}catch(e){b.textContent='Copy failed';}
+  setTimeout(()=>b.textContent='Copy',1500);
 }
 function hideManageStores(e){
   if(!e||e.target===document.getElementById('modal-overlay'))
@@ -1043,12 +1059,12 @@ async function renderSlackSettings(){
   if(!stores.length){el.innerHTML='<div style="font-size:13px;color:#86868b;">Geen stores gevonden.</div>';return;}
   el.innerHTML=stores.map(s=>`
     <div style="border:1px solid #e5e5ea;border-radius:10px;padding:12px 14px;margin-bottom:10px;">
-      <div style="font-size:12px;font-weight:600;color:#1d1d1f;margin-bottom:6px;">${s}</div>
+      <div style="font-size:12px;font-weight:600;color:#1d1d1f;margin-bottom:6px;">${esc(s)}</div>
       <div style="display:flex;gap:6px;align-items:center;">
-        <input id="wh-${cssId(s)}" type="url" placeholder="https://hooks.slack.com/services/..." value="${storesCache[s]||''}"
+        <input id="wh-${cssId(s)}" type="url" placeholder="https://hooks.slack.com/services/..." value="${esc(storesCache[s]||'')}"
           style="flex:1;border:1px solid #d2d2d7;border-radius:8px;padding:7px 10px;font-size:11px;font-family:monospace;outline:none;color:#1d1d1f;">
-        <button onclick="saveWebhook('${s}')" style="padding:7px 12px;border-radius:8px;border:none;background:#0071e3;color:white;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;">Save</button>
-        <button onclick="testWebhook('${s}')" style="padding:7px 12px;border-radius:8px;border:1px solid #d2d2d7;background:white;color:#1d1d1f;font-size:12px;cursor:pointer;white-space:nowrap;">Test</button>
+        <button onclick="saveWebhook(${jsq(s)})" style="padding:7px 12px;border-radius:8px;border:none;background:#0071e3;color:white;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;">Save</button>
+        <button onclick="testWebhook(${jsq(s)})" style="padding:7px 12px;border-radius:8px;border:1px solid #d2d2d7;background:white;color:#1d1d1f;font-size:12px;cursor:pointer;white-space:nowrap;">Test</button>
       </div>
     </div>`).join('');
 }

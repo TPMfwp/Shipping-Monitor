@@ -39,6 +39,7 @@ order per action section.
 - Session persists in localStorage; on `DOMContentLoaded` an existing session skips the login screen.
 - All app tables have RLS policies `TO authenticated` (no public access). `stores` has no DELETE policy;
   `perf_weekly_log` has RLS on with no policies (only Edge Functions with the service role touch it).
+  `app_settings` is SELECT-only for `authenticated`.
 
 ## Data model (Supabase tables)
 
@@ -69,17 +70,24 @@ sections. Snapshot of the shipment + `dismissed_at`. Restore deletes the row (an
 ### `perf_weekly_log`
 Records which weeks have already had the weekly performance Slack message, so Monday runs don't double-send.
 
+### `app_settings` — key/value config
+`webhook_token`: secret that `webhook` and `perf-check` require as `?token=`. Readable only after login, so the
+dashboard loads it at runtime (`loadWebhookUrl()`) — **never hardcode it in `index.html`** (public repo + public
+Pages). Rotating it = update the row, then re-paste the URL in ParcelPanel for every store.
+
 ## Edge Functions (Supabase)
 
 | Function | Role |
 |---|---|
-| `webhook` | Receives ParcelPanel `shipment_status / any_update` webhooks → upserts `shipments` → checks action sections → sends Slack alert via `slack-notify` (once per section, tracked in `action_log.slack_notified_sections`). On Mondays also triggers the weekly performance update (deduped via `perf_weekly_log`). |
+| `webhook` | Receives ParcelPanel `shipment_status / any_update` webhooks → rejects with 401 unless `?token=` matches `app_settings.webhook_token` → upserts `shipments` → checks action sections → sends Slack alert via `slack-notify` (once per section, tracked in `action_log.slack_notified_sections`). |
 | `slack-notify` | Thin proxy: `POST {webhook_url, blocks, text}` → posts to the Slack incoming webhook. Also called directly from the dashboard for "Test" buttons (browser can't post to Slack directly due to CORS). |
-| `perf-check` | Computes performance vs. the per-store thresholds in `stores` and sends alerts to `perf_webhook`. |
+| `perf-check` | Requires `?token=`. Fetches all shipments (paged, no 1000-row cap) → threshold alerts + weekly performance update to `perf_webhook` (weekly deduped via `perf_weekly_log`). Called every Monday 07:00 UTC by pg_cron job `perf-check-weekly` (pg_net, token read from `app_settings`). Calling it manually sends real Slack alerts. |
 | `Import` | Old Shopify+ParcelPanel bulk import used by `import.html`. **Inactive.** |
 
 New stores connect by adding a ParcelPanel webhook (Professional plan) pointing at
-`https://frxyfmfjtadyxhfogdvt.supabase.co/functions/v1/webhook`; the store appears after the first update.
+`https://frxyfmfjtadyxhfogdvt.supabase.co/functions/v1/webhook?token=<webhook_token>` (shown with Copy button in
+Manage stores → Add store); the store appears after the first update. One URL serves all stores — the store is
+identified by `store.name` in the payload.
 
 > **Thresholds live in two places — keep them in sync.** 5 days (label not shipped) and 15 days (delayed
 > in transit) are defined in both `getSection()` in `index.html` and the `webhook` Edge Function. Change one
@@ -135,4 +143,6 @@ is still used by the Slack Test button and shows the alert format.
 - Action thresholds (5/15 days) are hardcoded and separate from the configurable `perf_norm` (default 14).
 - `testWebhook()` sets two status messages in a row ("Test meldingen verstuurd." then "Test melding verstuurd.").
 - Table "days" colouring uses 7/15 thresholds, section rows use 5/15.
-- User-supplied strings (customer names, store names) are interpolated into `innerHTML` without escaping.
+
+User-supplied strings go through `esc()` before `innerHTML`, and through `jsq()` when passed as an argument in an
+inline `onclick`. Keep doing that for new markup.
