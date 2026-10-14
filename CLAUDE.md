@@ -52,12 +52,15 @@ EXCEPTION, EXPIRED, FAILED_ATTEMPT, CANCELLED, UNKNOWN, READY_FOR_PICKUP, RESOLV
 `id, order_number, customer_name, tracking_number, store_name, order_date, fulfillment_date, section,
 resolved_at, resolved_status, slack_notified` (+ server-side `slack_notified_sections` array).
 - `section`: `label_not_shipped` | `delayed` | `exception` | `deleted` (permanent delete marker).
-- `slack_notified_sections` (array) is maintained by the `webhook` function: each order gets **one Slack
-  message per action section, ever**. The dashboard itself still writes the legacy boolean `slack_notified:false`
-  on insert and does not touch the array.
+- Two notification fields coexist on purpose:
+  - `slack_notified_sections` (array) is the real one, maintained by the `webhook` function: each order gets
+    **one Slack message per action section, ever**.
+  - `slack_notified` (boolean) is legacy; the dashboard still writes `slack_notified:false` on new entries.
+    Don't remove either without checking the `webhook` function.
 
 ### `dismissed` — orders the user dismissed from the action sections (primary key `id` = `rowId`)
-Snapshot of the shipment + `dismissed_at`. Restore deletes the row (and its `action_log` row).
+Orders manually clicked away (×) in the dashboard are stored here so they no longer appear in the action
+sections. Snapshot of the shipment + `dismissed_at`. Restore deletes the row (and its `action_log` row).
 
 ### `stores` — per-store settings (primary key `store_name`)
 `slack_webhook_url` (shipping alerts), `perf_norm` (on-time norm in days, default 14), `perf_webhook`
@@ -78,8 +81,10 @@ Records which weeks have already had the weekly performance Slack message, so Mo
 New stores connect by adding a ParcelPanel webhook (Professional plan) pointing at
 `https://frxyfmfjtadyxhfogdvt.supabase.co/functions/v1/webhook`; the store appears after the first update.
 
-> The server-side section logic must stay in sync with `getSection()` in `index.html`. When changing
-> thresholds, change both (and check `perf-check`).
+> **Thresholds live in two places — keep them in sync.** 5 days (label not shipped) and 15 days (delayed
+> in transit) are defined in both `getSection()` in `index.html` and the `webhook` Edge Function. Change one
+> without the other and the dashboard and the Slack alerts will disagree. Since Edge Functions are edited in
+> the Supabase dashboard, a threshold change = commit `index.html` **and** update `webhook` there.
 
 ## Dashboard logic (`index.html`)
 
