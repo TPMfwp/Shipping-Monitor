@@ -155,6 +155,10 @@ is still used by the Slack Test button and shows the alert format.
 ## Known quirks (not bugs to fix unless asked)
 
 - Action thresholds (`alert_*_days`) are separate from the performance `perf_norm` (default 14).
+- Delete puts the order in "Recently solved" for 48h — intentional (lets the merchant double-check a delete).
+- `webhook` ignores dismissed/deleted orders: a deleted order can still get a Slack alert when it later enters
+  a *new* section (e.g. a wrong label that ParcelPanel marks EXPIRED). Intentional — the merchant sees it as an
+  extra "this is an old one" confirmation. Don't "fix" without asking.
 - `testWebhook()` sets two status messages in a row ("Test meldingen verstuurd." then "Test melding verstuurd.").
 
 User-supplied strings go through `esc()` before `innerHTML`, and through `jsq()` when passed as an argument in an
