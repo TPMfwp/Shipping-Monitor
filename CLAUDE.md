@@ -144,7 +144,7 @@ filter; table is sortable, 100 rows per page. Store tabs are derived from distin
   the previous period of the same length next to it ("last week" / "prev 30d").
 - On time % (orders DELIVERED in the period, ≤ that store's `perf_norm`), Without problems % (orders SHIPPED in
   the period shifted 14 days back, `PERF_LAG`; problem = current problem status or `action_log` exception history),
-  Delivery time (avg transit, + processing), Delivered count. Footnote `perf-note` shows the shipped-date range used for Without problems, or "No orders in the last N days".
+  Delivery time (avg transit, + processing), Delivered count. Footnote `perf-note` only shows "No orders in the last N days" for an empty period (explanation text removed — too busy).
 - Colour like Slack (green on goal / orange within 10pt resp. 5pt / red below), only per store and with ≥20 orders.
 - Settings panel (hidden on "All stores") saves `perf_*` to `stores`; goal fields are "% on time" and "% without
   problems" (stored as `perf_alert_exc = 100 − input`). Test saves first, then calls `perf-check?force_weekly=1&store=`

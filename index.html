@@ -192,7 +192,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
         <div id="perf-delivered-delta" style="font-size:11px;color:#86868b;margin-top:2px;"></div>
       </div>
     </div>
-    <div id="perf-note" style="font-size:11px;color:#86868b;margin-top:10px;"></div>
+    <div id="perf-note" style="font-size:11px;color:#86868b;margin-top:10px;empty-cells:hide;"></div>
     <!-- Settings panel -->
     <div id="perf-settings" style="display:none;margin-top:1rem;padding-top:1rem;border-top:1px solid #f2f2f7;">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
@@ -1026,9 +1026,8 @@ function renderPerformance(){
   set('perf-avg-delta',join([cur.proc!==null?`+ ${cur.proc}d processing`:'',prev&&prev.transit!==null?`${prevL}: ${prev.transit}d`:'']));
   set('perf-delivered',cur.n);
   set('perf-delivered-delta',N?(prev?`${prevL}: ${prev.n}`:''):'all time');
-  const fd=t=>new Date(t).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
-  set('perf-note',!cur.n&&!pc.n&&N?`No orders in the last ${N} days — choose All to see everything.`
-    :`Without problems counts orders shipped ${N?`${fd(now-lag-N*D)} – ${fd(now-lag)}`:`before ${fd(now-lag)}`}. Newer orders are left out because they're still on their way.`);
+  // Alleen een melding bij een lege periode, anders leeg (uitleg maakte het blok alleen drukker)
+  set('perf-note',!cur.n&&!pc.n&&N?`No orders in the last ${N} days — choose All to see everything.`:'');
 }
 
 // ── Slack integration ────────────────────────────────────────────────────────
