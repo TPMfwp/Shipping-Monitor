@@ -197,6 +197,9 @@ Status 2026-10-16: test data (TEST STORE, DEMO GOOD/ALMOST/BAD) fully removed; o
 flow again. Its `perf_webhook` still points at the old `#dayone-supply-chain` webhook — update when a store goes live.
 
 Ideas for later (not started):
+- Egress (free plan 5 GB/month; 2026-10-16: 0.09 GB used, 29 MB DB). `loadData()` reloads ALL shipments every 60s
+  (`setInterval`), also in background tabs. Only if egress nears 3–4 GB: (1) skip refresh when `document.hidden`,
+  refresh on `visibilitychange`; (2) then incremental fetch (`last_updated > lastLoad`) instead of the full table.
 - Separate idea: action section for `READY_FOR_PICKUP` (parcel at pickup point, may be returned).
 - Separate idea: drop customer email from Slack alerts if the channel is shared with the supplier (privacy).
 - Tracking links: BUILT 2026-10-15 (see `shipments.tracking_link` / `webhook_samples`). Still open: verify the
