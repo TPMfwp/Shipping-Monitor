@@ -221,7 +221,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
           <span class="sec-dot red" id="dot1"></span>
           <div>
             <div class="sec-title">Label created, not shipped</div>
-            <div class="sec-sub">Tracking exists but no carrier scan after 5+ days — contact supplier</div>
+            <div class="sec-sub" id="sub1">Tracking exists but no carrier scan after 5+ days — contact supplier</div>
           </div>
         </div>
         <div class="sec-count red" id="count1">—</div>
@@ -235,7 +235,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
           <span class="sec-dot amber" id="dot2"></span>
           <div>
             <div class="sec-title">Delayed in transit</div>
-            <div class="sec-sub">In transit for 15+ days without delivery — contact supplier</div>
+            <div class="sec-sub" id="sub2">In transit for 15+ days without delivery — contact supplier</div>
           </div>
         </div>
         <div class="sec-count amber" id="count2">—</div>
@@ -311,6 +311,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
       <button id="tab-add" onclick="switchTab('add')" style="flex:1;padding:10px;border:none;background:none;font-size:13px;font-weight:500;color:#0071e3;border-bottom:2px solid #0071e3;cursor:pointer;">Add store</button>
       <button id="tab-remove" onclick="switchTab('remove')" style="flex:1;padding:10px;border:none;background:none;font-size:13px;font-weight:500;color:#86868b;border-bottom:2px solid transparent;cursor:pointer;">Remove store</button>
       <button id="tab-slack" onclick="switchTab('slack')" style="flex:1;padding:10px;border:none;background:none;font-size:13px;font-weight:500;color:#86868b;border-bottom:2px solid transparent;cursor:pointer;">Slack</button>
+      <button id="tab-alerts" onclick="switchTab('alerts')" style="flex:1;padding:10px;border:none;background:none;font-size:13px;font-weight:500;color:#86868b;border-bottom:2px solid transparent;cursor:pointer;">Alerts</button>
     </div>
 
     <div id="tab-add-content">
@@ -348,6 +349,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
         <div style="font-size:13px;color:#86868b;">Laden...</div>
       </div>
       <div id="slack-msg" style="font-size:12px;margin-top:8px;min-height:18px;"></div>
+    </div>
+
+    <div id="tab-alerts-content" style="display:none;">
+      <p style="font-size:13px;color:#86868b;margin-bottom:1.25rem;line-height:1.6;">Per store: after how many days an order enters an action section and gets a Slack alert. Exceptions always alert immediately.</p>
+      <p style="font-size:12px;color:#86868b;margin-bottom:1.25rem;line-height:1.6;">Lowering a number can trigger many alerts at once for orders already past the new limit. Raising it does not undo alerts already sent.</p>
+      <div id="alerts-store-list"><div style="font-size:13px;color:#86868b;">Loading...</div></div>
+      <div id="alerts-msg" style="font-size:12px;margin-top:8px;min-height:18px;"></div>
     </div>
   </div>
 </div>
@@ -431,6 +439,9 @@ function timeAgo(d){
 function isNew(d){return new Date(d.order_date||d.fulfillment_date||0)>=CUTOFF;}
 function hasTracking(d){const t=d.tracking_number||'';return t&&t!=='Unknown'&&t!=='';}
 
+// Per-store actiegrenzen (stores.alert_not_shipped_days / alert_delayed_days); zelfde logica als de webhook-functie
+let thrCache={};
+function thr(store){return thrCache[store]||{ns:5,dl:15};}
 function getSection(d){
   if(d.status==='CANCELLED'||d.status==='RESOLVED')return null;
   if(!isNew(d)||!hasTracking(d))return null;
@@ -438,11 +449,11 @@ function getSection(d){
   // Check if permanently deleted
   const logged=actionLogCache.find(x=>x.id===rowId(d));
   if(logged&&logged.section==='deleted')return null;
-  const days=daysSince(d.fulfillment_date||d.order_date);
+  const days=daysSince(d.fulfillment_date||d.order_date),t=thr(d.store_name);
   const s=d.status||'';
   if(s==='EXCEPTION'||s==='EXPIRED'||s==='FAILED_ATTEMPT')return 3;
-  if((s==='PENDING'||s==='INFO_RECEIVED')&&days>=5)return 1;
-  if((s==='IN_TRANSIT'||s==='OUT_FOR_DELIVERY')&&days>=15)return 2;
+  if((s==='PENDING'||s==='INFO_RECEIVED')&&days>=t.ns)return 1;
+  if((s==='IN_TRANSIT'||s==='OUT_FOR_DELIVERY')&&days>=t.dl)return 2;
   return null;
 }
 function trackHtml(d){
@@ -527,8 +538,8 @@ function renderSections(){
       el.innerHTML='<div class="allclear">All clear</div>';
     }else{
       el.innerHTML='<div class="sec-rows">'+arr.map(d=>{
-        const days=daysSince(d.fulfillment_date||d.order_date);
-        const dc=days>=15?'dc-red':days>=5?'dc-amber':'dc-ok';
+        const days=daysSince(d.fulfillment_date||d.order_date),t=thr(d.store_name);
+        const dc=days>=t.dl?'dc-red':days>=t.ns?'dc-amber':'dc-ok';
         const xbtn=showDismiss?`<button class="xbtn dismiss-trigger" data-id="${esc(rowId(d))}">×</button>`:'<div></div>';
         return `<div class="srow${showDismiss?'':' solved'}">
           <div class="onum">${esc(d.order_number||'—')}</div>
@@ -541,6 +552,12 @@ function renderSections(){
       }).join('')+'</div>';
     }
   };
+
+  // Sectie-uitleg toont de dagen van de gekozen store; bij "All stores" alleen als alle stores gelijk staan
+  const sts=curStore==='all'?[...new Set(all.map(d=>d.store_name).filter(Boolean))]:[curStore];
+  const lbl=k=>{const v=[...new Set(sts.map(x=>thr(x)[k]))];return v.length===1?v[0]+'+ days':"each store's set number of days";};
+  document.getElementById('sub1').textContent=`Tracking exists but no carrier scan after ${lbl('ns')} — contact supplier`;
+  document.getElementById('sub2').textContent=`In transit for ${lbl('dl')} without delivery — contact supplier`;
 
   renderRows(s1,'rows1','count1','dot1','red');
   renderRows(s2,'rows2','count2','dot2','amber');
@@ -677,7 +694,7 @@ function renderTable(){
   if(!page.length){el.innerHTML='<div class="empty">No shipments found.</div>';renderPager();return;}
   el.innerHTML=page.map(d=>{
     const days=daysSince(d.fulfillment_date||d.order_date);
-    const dc=days>=15?'dc-red':days>=7?'dc-amber':'dc-ok';
+    const t=thr(d.store_name),dc=days>=t.dl?'dc-red':days>=t.ns?'dc-amber':'dc-ok';
     return `<div class="tr">
       <div style="display:flex;align-items:center;justify-content:center;"><span class="dot" style="background:${DOTCLR[d.status||'UNKNOWN']||'#c7c7cc'};"></span></div>
       <div class="onum">${esc(d.order_number||'—')}</div>
@@ -733,13 +750,43 @@ function switchTab(tab){
   document.getElementById('tab-add-content').style.display=tab==='add'?'block':'none';
   document.getElementById('tab-remove-content').style.display=tab==='remove'?'block':'none';
   document.getElementById('tab-slack-content').style.display=tab==='slack'?'block':'none';
-  ['add','remove','slack'].forEach(t=>{
+  document.getElementById('tab-alerts-content').style.display=tab==='alerts'?'block':'none';
+  ['add','remove','slack','alerts'].forEach(t=>{
     const el=document.getElementById('tab-'+t);
     if(!el)return;
     el.style.color=tab===t?'#0071e3':'#86868b';
     el.style.borderBottomColor=tab===t?'#0071e3':'transparent';
   });
   if(tab==='slack')renderSlackSettings();
+  if(tab==='alerts')renderAlertSettings();
+}
+
+async function renderAlertSettings(){
+  const stores=[...new Set(all.map(d=>d.store_name).filter(Boolean))].sort();
+  await loadStores();
+  const el=document.getElementById('alerts-store-list');
+  if(!stores.length){el.innerHTML='<div style="font-size:13px;color:#86868b;">No stores found.</div>';return;}
+  const inp='width:56px;border:1px solid #d2d2d7;border-radius:8px;padding:6px 8px;font-size:13px;outline:none;color:#1d1d1f;text-align:center;';
+  el.innerHTML=stores.map(s=>{const t=thr(s);return `
+    <div style="border:1px solid #e5e5ea;border-radius:10px;padding:12px 14px;margin-bottom:10px;">
+      <div style="font-size:12px;font-weight:600;color:#1d1d1f;margin-bottom:8px;">${esc(s)}</div>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:12px;color:#1d1d1f;">
+        <label style="display:flex;gap:6px;align-items:center;">Not shipped after <input id="ns-${cssId(s)}" type="number" min="1" max="120" value="${t.ns}" style="${inp}"> days</label>
+        <label style="display:flex;gap:6px;align-items:center;">Delayed after <input id="dl-${cssId(s)}" type="number" min="1" max="120" value="${t.dl}" style="${inp}"> days</label>
+        <button onclick="saveAlertDays(${jsq(s)})" style="margin-left:auto;padding:7px 12px;border-radius:8px;border:none;background:#0071e3;color:white;font-size:12px;font-weight:500;cursor:pointer;">Save</button>
+      </div>
+    </div>`;}).join('');
+}
+
+async function saveAlertDays(store){
+  const ns=parseInt(document.getElementById('ns-'+cssId(store))?.value),dl=parseInt(document.getElementById('dl-'+cssId(store))?.value);
+  const msg=(m,c)=>{const el=document.getElementById('alerts-msg');el.textContent=m;el.style.color=c;setTimeout(()=>{if(el.textContent===m)el.textContent='';},4000);};
+  if(!(ns>=1&&ns<=120&&dl>=1&&dl<=120)){msg('Use whole numbers between 1 and 120.','#ff3b30');return;}
+  const{error}=await sb.from('stores').upsert({store_name:store,alert_not_shipped_days:ns,alert_delayed_days:dl},{onConflict:'store_name'});
+  if(error){msg('Save failed: '+error.message,'#ff3b30');return;}
+  thrCache[store]={ns,dl};
+  msg(`Saved for ${store}.`,'#34c759');
+  renderSections();renderTable();
 }
 document.addEventListener('change',function(e){
   if(e.target.id==='remove-store-select'){
@@ -1012,9 +1059,9 @@ let storesCache = {}; // store_name -> slack_webhook_url
 
 async function loadStores(){
   if(!sb)return;
-  const{data}=await sb.from('stores').select('store_name,slack_webhook_url');
-  storesCache={};
-  (data||[]).forEach(r=>{ storesCache[r.store_name]=r.slack_webhook_url||''; });
+  const{data}=await sb.from('stores').select('store_name,slack_webhook_url,alert_not_shipped_days,alert_delayed_days');
+  storesCache={};thrCache={};
+  (data||[]).forEach(r=>{ storesCache[r.store_name]=r.slack_webhook_url||''; thrCache[r.store_name]={ns:r.alert_not_shipped_days||5,dl:r.alert_delayed_days||15}; });
 }
 
 async function saveStoreWebhook(store_name, slack_webhook_url){

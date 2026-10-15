@@ -65,7 +65,9 @@ sections. Snapshot of the shipment + `dismissed_at`. Restore deletes the row (an
 
 ### `stores` — per-store settings (primary key `store_name`)
 `slack_webhook_url` (shipping alerts), `perf_norm` (on-time norm in days, default 14), `perf_webhook`
-(performance alerts), `perf_alert_ontime` (alert if on-time % below), `perf_alert_exc` (alert if exception % above).
+(performance alerts), `perf_alert_ontime` (alert if on-time % below), `perf_alert_exc` (alert if exception % above),
+`alert_not_shipped_days` (default 5) and `alert_delayed_days` (default 15) — the per-store action-section thresholds,
+edited in Manage stores → Alerts. A store without a `stores` row uses 5/15.
 
 ### `perf_weekly_log`
 Records which weeks have already had the weekly performance Slack message, so Monday runs don't double-send.
@@ -89,10 +91,9 @@ New stores connect by adding a ParcelPanel webhook (Professional plan) pointing 
 Manage stores → Add store); the store appears after the first update. One URL serves all stores — the store is
 identified by `store.name` in the payload.
 
-> **Thresholds live in two places — keep them in sync.** 5 days (label not shipped) and 15 days (delayed
-> in transit) are defined in both `getSection()` in `index.html` and the `webhook` Edge Function. Change one
-> without the other and the dashboard and the Slack alerts will disagree. Since Edge Functions are edited in
-> the Supabase dashboard, a threshold change = commit `index.html` **and** update `webhook` there.
+> **Section logic lives in two places — keep it in sync.** The thresholds themselves come from `stores`
+> (per store), but the section *logic* (`getSection()`, statuses, CUTOFF, the 5/15 fallback) is duplicated in
+> `index.html` (`thr()`/`getSection()`) and the `webhook` Edge Function. Change one = change both.
 
 ## Dashboard logic (`index.html`)
 
@@ -111,8 +112,10 @@ render everything.
   or `action_log.section === 'deleted'`.
 - days = days since `fulfillment_date || order_date`.
 - **3 Exception**: `EXCEPTION`, `EXPIRED`, `FAILED_ATTEMPT` (any age).
-- **1 Label created, not shipped**: `PENDING`/`INFO_RECEIVED` and days ≥ 5.
-- **2 Delayed in transit**: `IN_TRANSIT`/`OUT_FOR_DELIVERY` and days ≥ 15.
+- **1 Label created, not shipped**: `PENDING`/`INFO_RECEIVED` and days ≥ `thr(store).ns` (default 5).
+- **2 Delayed in transit**: `IN_TRANSIT`/`OUT_FOR_DELIVERY` and days ≥ `thr(store).dl` (default 15).
+- Section subtitles (`sub1`/`sub2`) show the selected store's numbers; on "All stores" only when all stores match.
+- Day colouring (section rows + table) uses the same per-store thresholds.
 
 `renderSections()` also writes to `action_log` from the client: `logAction()` inserts new action items,
 `resolveAction()` sets `resolved_at/resolved_status` when an item leaves all sections. "Recently solved"
@@ -131,18 +134,17 @@ filter; table is sortable, 100 rows per page. Store tabs are derived from distin
   this-month vs last-month avg delta.
 - Settings panel (hidden on "All stores") saves `perf_*` to `stores`; Test sends a sample block to `perf_webhook`.
 
-**Manage stores modal** — tabs: Add (ParcelPanel setup instructions), Remove (type store name to confirm;
+**Manage stores modal** — tabs: Add (ParcelPanel setup instructions + webhook URL with token), Remove (type store name to confirm;
 deletes that store's rows in `shipments`, `dismissed`, `action_log`), Slack (per-store `slack_webhook_url`
-save + Test, which sends 3 example alerts via `slack-notify`).
+save + Test, which sends 3 example alerts via `slack-notify`), Alerts (per-store not-shipped/delayed days).
 
 `notifySlack()` is a no-op — notifications moved server-side into the `webhook` function. `buildBlocks()`
 is still used by the Slack Test button and shows the alert format.
 
 ## Known quirks (not bugs to fix unless asked)
 
-- Action thresholds (5/15 days) are hardcoded and separate from the configurable `perf_norm` (default 14).
+- Action thresholds (`alert_*_days`) are separate from the performance `perf_norm` (default 14).
 - `testWebhook()` sets two status messages in a row ("Test meldingen verstuurd." then "Test melding verstuurd.").
-- Table "days" colouring uses 7/15 thresholds, section rows use 5/15.
 
 User-supplied strings go through `esc()` before `innerHTML`, and through `jsq()` when passed as an argument in an
 inline `onclick`. Keep doing that for new markup.
