@@ -81,7 +81,7 @@ sections. Snapshot of the shipment + `dismissed_at`. Restore deletes the row (an
 edited in Manage stores → Alerts. A store without a `stores` row uses 5/15.
 
 ### `perf_weekly_log`
-Records which weeks have already had the weekly performance Slack message, so Monday runs don't double-send.
+Dedup + record: one row per store per sent report. `week` = Monday date (`2026-10-19`) for the weekly report, `month-YYYY-MM` (the month reported on) for the monthly report. Holds that report's figures (ontime/problem %, proc/transit days, counts). Comparisons in the reports are computed live from `shipments`, NOT from this table.
 
 ### `app_settings` — key/value config
 `webhook_token`: secret that `webhook` and `perf-check` require as `?token=`. Readable only after login, so the
@@ -94,7 +94,7 @@ Pages). Rotating it = update the row, then re-paste the URL in ParcelPanel for e
 |---|---|
 | `webhook` | Receives ParcelPanel `shipment_status / any_update` webhooks → rejects with 401 unless `?token=` matches `app_settings.webhook_token` → upserts `shipments` → checks action sections → sends Slack alert via `slack-notify` (once per section, tracked in `action_log.slack_notified_sections`). |
 | `slack-notify` | Thin proxy: `POST {webhook_url, blocks, text}` → posts to the Slack incoming webhook. Requires either `?token=` (used by `webhook`/`perf-check`) or a logged-in session `Authorization: Bearer` (dashboard `sendSlack()` for the "Test" buttons; browser can't post to Slack directly due to CORS). Only accepts `https://hooks.slack.com/` URLs. |
-| `perf-check` | Requires `?token=`. Monday 07:00 UTC via pg_cron `perf-check-weekly` (exits early on other days). Sends ONE "Delivery report" per store (weekly, measured over the last 30 days; context line says so) to `perf_webhook` (no separate alert any more): header block, goals context line, verdict (🟢 on track / 🟡 almost / 🔴 off track / ⚪ <20 orders — worst of the two metrics), On time + Delivery problems with "1 in N orders" wording and "X% better/worse than last week", Where the time goes (processing order→shipped vs transit shipped→delivered), Open problems by type, "What stands out" and "Where to improve" (rule-based, max 3 lines, fixed tip per problem type in `PROBLEM_INFO`). Last 30 days; on time/avg over orders delivered in the period, problems over orders shipped in the period that ever had a problem status (incl. `action_log` exception history). Snapshot per week stored in `perf_weekly_log` (ontime/problem %, avg/proc/transit days, counts) for next week's comparison and "best in N weeks". Test params: `&store=<name>&force_weekly=1` (sends outside Monday, never writes a snapshot). |
+| `perf-check` | Requires `?token=`. pg_cron `perf-check-weekly` Monday 07:00 UTC. Every Monday a **📊 Weekly delivery report** (last 7 days vs the 7 days before); on the first Monday of the month also a **📅 Monthly delivery report** (previous calendar month vs the month before). Both built by `buildReport(kind)`, sent to `perf_webhook`. Layout: header, context line (period + goals), verdict (🟢 On goal / 🟡 Close to goal / 🔴 Below goal / ⚪ no verdict when <20 orders — worst of the two metrics, neutral wording), fields On time (% delivered within `perf_norm` of orders DELIVERED in the period, vs previous period) + Delivery problems (% of orders SHIPPED that ever had a problem status incl. `action_log` exception history; weekly report uses orders shipped 14–21 days ago because fresh shipments haven't had time to get stuck — the date range is shown), Where the time goes (processing order→shipped, transit shipped→delivered, vs previous period), Stuck right now (current problem status, shipped in last 60 days, per type; orders deleted in the dashboard are excluded unless the carrier had a new scan (`last_checkpoint_time`) after the delete — same idea as the Slack alerts; dismissed orders still count), What stands out (facts only, no advice, max 3, each with its own threshold: where late orders lose time vs on-time orders, on time ±10pt or processing ±2 days vs previous period, carrier gap ≥15pt with ≥10 orders each, stuck orders concentrated at one carrier ≥60%, back on goal, best on-time period in N (≥3 earlier periods with ≥20 orders), else "Steady week" when green). Skips a store with nothing delivered/shipped/stuck. Test params: `&store=<name>&force_weekly=1` and/or `&force_monthly=1` (sends any day, never writes `perf_weekly_log`). |
 | `Import` | Old Shopify+ParcelPanel bulk import used by `import.html`. **Inactive.** |
 
 New stores connect by adding a ParcelPanel webhook (Professional plan) pointing at
@@ -164,24 +164,19 @@ is still used by the Slack Test button and shows the alert format.
 User-supplied strings go through `esc()` before `innerHTML`, and through `jsq()` when passed as an argument in an
 inline `onclick`. Keep doing that for new markup.
 
-## Supplier Performance redesign (2026-10-15) — step 1 (Slack/perf-check) DONE, step 2 (dashboard) and step 3 (skip weekly when idle) open
+## Supplier Performance redesign (2026-10-15) — Slack reports DONE (perf-check v18), dashboard (step 2) open
 
-Current calc problems (dashboard `renderPerformance()` and `perf-check`, duplicated):
-1. All-time figures → barely move, weekly message ~identical every week, alerts late or stuck on.
-2. "This month" uses only already-delivered orders → slow ones still in transit, so it always looks better.
-3. Exception % counts only orders whose *current* status is an exception; resolved ones drop out. `action_log`
-   (`section='exception'`) has the history. `EXPIRED` isn't always a real problem.
-4. Mean instead of median; a few 60-day orders skew it.
+Decisions by the merchant (2026-10-15):
+- Weekly report is purely about the week, compared with last week (a 30-day figure next to it was confusing).
+  Monthly view = separate monthly report on the first Monday + the dashboard period selector.
+- No advice/tips in the report ("Where to improve" removed): only facts from the data, neutral, not talking anyone down.
+- Fewer than 20 orders → numbers shown but no colour/verdict.
+- Dashboard actions don't change the % figures; only "Stuck right now" excludes deleted orders (see perf-check).
+- Merchant wants minimal maintenance: the report must stay correct without manual work in the dashboard.
 
-Options discussed:
-- Period: per week alone is too noisy (E&R had 2–224 deliveries/week). Leaning towards: alerts on rolling
-  30 days (by delivery date), weekly Slack message showing last 7 days + last 30 days with order counts,
-  7/30/90/all selector in dashboard, minimum ~20 delivered orders before an alert fires.
-- Exception alert stays an absolute per-store % (not deviation from average) — per-store thresholds already cover that.
-- Rewrite performance Slack texts for the supplier: explain "on time" as "delivered within N days", hide
-  internal "threshold" wording or phrase it as agreed target, add a request ("Could you look into…"), use
-  period counts instead of all-time "Delivered: 1151". Drafts were shown to the merchant in-session.
-- Weekly message currently sends every Monday even when a store is idle — maybe only send if something was delivered.
+Still open:
+- Step 2: dashboard `renderPerformance()` + perf Test button still use the OLD all-time calculation and old Slack
+  format. Align with `perf-check` (same definitions) and add a 7/30/90/all period selector.
 - Separate idea: action section for `READY_FOR_PICKUP` (parcel at pickup point, may be returned).
 - Separate idea: drop customer email from Slack alerts if the channel is shared with the supplier (privacy).
 - Tracking links: BUILT 2026-10-15 (see `shipments.tracking_link` / `webhook_samples`). Still open: verify the
