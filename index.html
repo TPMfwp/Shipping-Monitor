@@ -134,7 +134,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
     <div class="hright">
       <span class="pulse"></span>
       <span class="rlabel" id="rlabel">Auto-refresh every 60s</span>
-      <button class="btn" onclick="loadData()">Refresh now</button>
+      <button class="btn" onclick="loadData(true)">Refresh now</button>
       <button class="btn" onclick="showManageStores()">Manage stores</button>
     </div>
   </div>
@@ -838,23 +838,46 @@ async function removeStore(){
   btn.textContent='Remove store';
   if(curStore===store)curStore='all';
   hideManageStores();
-  await loadData();
+  await loadData(true);
 }
 
-async function loadData(){
+// Verversen: volledig bij openen, via de Refresh-knop, na Remove store en elke 15 min (vangnet);
+// verder elke minuut alleen rijen die de webhook sinds de vorige keer bijwerkte (last_updated), om egress te sparen.
+// cursor = hoogste last_updated uit de data zelf (servertijd, geen klokverschil) min 2 min marge; samenvoegen op id.
+const FULL_EVERY=15*60000;
+let lastFull=0,shipCursor=null;
+async function fetchShipments(filter){
+  let data=[],from=0;
+  while(true){
+    let q=sb.from('shipments').select('*');
+    if(filter)q=q.gte('last_updated',filter);
+    const{data:batch,error}=await q.range(from,from+999).order('order_date',{ascending:false});
+    if(error)throw error;
+    if(!batch||!batch.length)break;
+    data=data.concat(batch);
+    if(batch.length<1000)break;
+    from+=1000;
+  }
+  return data;
+}
+async function loadData(full){
   if(!sb)return;
   document.getElementById('rlabel').textContent='Refreshing...';
   try{
-    let data=[],from=0;
-    while(true){
-      const{data:batch,error}=await sb.from('shipments').select('*').range(from,from+999).order('order_date',{ascending:false});
-      if(error)throw error;
-      if(!batch||!batch.length)break;
-      data=data.concat(batch);
-      if(batch.length<1000)break;
-      from+=1000;
+    if(full===true||!shipCursor||Date.now()-lastFull>FULL_EVERY){
+      all=await fetchShipments(null);
+      lastFull=Date.now();
+    }else{
+      const changed=await fetchShipments(shipCursor);
+      if(changed.length){
+        const byId=new Map(all.map(d=>[d.id,d]));
+        changed.forEach(d=>byId.set(d.id,d));
+        // Zelfde volgorde als de volledige lading: order_date aflopend, lege datums eerst (zoals Postgres DESC)
+        all=[...byId.values()].sort((a,b)=>!a.order_date?-1:!b.order_date?1:b.order_date.localeCompare(a.order_date));
+      }
     }
-    all=data;
+    const maxUpd=all.reduce((m,d)=>d.last_updated&&d.last_updated>m?d.last_updated:m,'');
+    shipCursor=maxUpd?new Date(new Date(maxUpd).getTime()-120000).toISOString():null;
     await loadDismissed();
     await loadActionLog();
     await loadStores();
@@ -880,8 +903,10 @@ document.addEventListener('click', function(e){
 function enterApp(){
   document.getElementById('password-view').style.display='none';
   document.getElementById('main-view').style.display='block';
-  loadData();
-  setInterval(loadData,60000);
+  loadData(true);
+  // Niet verversen als het tabblad niet zichtbaar is; bij terugkomen direct verversen
+  setInterval(()=>{if(!document.hidden)loadData();},60000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadData();});
 }
 
 async function checkPassword(){

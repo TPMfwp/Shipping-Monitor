@@ -150,6 +150,12 @@ filter; table is sortable, 100 rows per page. Store tabs are derived from distin
   problems" (stored as `perf_alert_exc = 100 − input`). Test saves first, then calls `perf-check?force_weekly=1&store=`
   (no-cors, token from `app_settings`) so it sends the real weekly report to the saved `perf_webhook`.
 
+**Refresh** (`loadData(full)`): full table load on open, "Refresh now", after Remove store and every 15 min
+(`FULL_EVERY`, safety net); otherwise every 60s only rows with `last_updated >= shipCursor` (max `last_updated` in the data
+minus 2 min), merged into `all` by `id`. Paused while the tab is hidden (`document.hidden`), refreshes on return
+(`visibilitychange`). Built 2026-10-16 to keep egress low (free plan 5 GB; was 0.09 GB). Rows changed outside the webhook
+without touching `last_updated` only show up on the next full load.
+
 **Manage stores modal** — tabs: Add (ParcelPanel setup instructions + webhook URL with token), Remove (type store name to confirm;
 calls RPC `remove_store(p_store)` — SECURITY DEFINER, authenticated only — which deletes the store's rows in `shipments`,
 `action_log`, `dismissed`, `perf_weekly_log`, `webhook_samples` and `stores` in one transaction. Before 2026-10-16 it did
@@ -197,9 +203,6 @@ Status 2026-10-16: test data (TEST STORE, DEMO GOOD/ALMOST/BAD) fully removed; o
 flow again. Its `perf_webhook` still points at the old `#dayone-supply-chain` webhook — update when a store goes live.
 
 Ideas for later (not started):
-- Egress (free plan 5 GB/month; 2026-10-16: 0.09 GB used, 29 MB DB). `loadData()` reloads ALL shipments every 60s
-  (`setInterval`), also in background tabs. Only if egress nears 3–4 GB: (1) skip refresh when `document.hidden`,
-  refresh on `visibilitychange`; (2) then incremental fetch (`last_updated > lastLoad`) instead of the full table.
 - Separate idea: action section for `READY_FOR_PICKUP` (parcel at pickup point, may be returned).
 - Separate idea: drop customer email from Slack alerts if the channel is shared with the supplier (privacy).
 - Tracking links: BUILT 2026-10-15 (see `shipments.tracking_link` / `webhook_samples`). Still open: verify the
