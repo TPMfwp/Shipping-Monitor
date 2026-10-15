@@ -736,6 +736,7 @@ function showManageStores(){
   document.getElementById('remove-confirm-input').value='';
   document.getElementById('remove-btn').disabled=true;
   document.getElementById('remove-btn').style.opacity='0.4';
+  document.getElementById('remove-btn').textContent='Remove store';
   switchTab('add');
   loadWebhookUrl();
   document.getElementById('modal-overlay').classList.remove('hidden');
@@ -813,23 +814,20 @@ document.addEventListener('change',function(e){
       confirm.style.display='none';
     }
   }
-  if(e.target.id==='remove-confirm-input'){
-    const store=document.getElementById('remove-store-select').value;
-    const btn=document.getElementById('remove-btn');
-    if(e.target.value===store){
-      btn.disabled=false;
-      btn.style.opacity='1';
-    }else{
-      btn.disabled=true;
-      btn.style.opacity='0.4';
-    }
-  }
+});
+// Bij elke toetsaanslag checken (het 'change'-event kwam pas bij het verlaten van het veld, dus de knop bleef uit)
+document.addEventListener('input',function(e){
+  if(e.target.id!=='remove-confirm-input')return;
+  const ok=e.target.value.trim()===document.getElementById('remove-store-select').value;
+  const btn=document.getElementById('remove-btn');
+  btn.disabled=!ok;
+  btn.style.opacity=ok?'1':'0.4';
 });
 async function removeStore(){
   const store=document.getElementById('remove-store-select').value;
   if(!store)return;
   const confirm=document.getElementById('remove-confirm-input').value;
-  if(confirm!==store)return;
+  if(confirm.trim()!==store)return;
   const btn=document.getElementById('remove-btn');
   btn.textContent='Removing...';
   btn.disabled=true;
