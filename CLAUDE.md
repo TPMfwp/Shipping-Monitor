@@ -139,11 +139,16 @@ Restore removes the `dismissed` and `action_log` rows (item can re-enter and re-
 **Stats & table** — 4 clickable stat tiles (Action required / In transit / Delivered / Total) set the table
 filter; table is sortable, 100 rows per page. Store tabs are derived from distinct `store_name` in shipments.
 
-**Supplier Performance** (`renderPerformance()`, per store or all):
-- delivery time = `last_checkpoint_time − fulfillment_date` for DELIVERED rows, kept if 0–120 days.
-- Avg delivery, On time % (≤ `perf_norm`), Exceptions % (of rows with a known status), Delivered count,
-  this-month vs last-month avg delta.
-- Settings panel (hidden on "All stores") saves `perf_*` to `stores`; Test sends a sample block to `perf_webhook`.
+**Supplier Performance** (`renderPerformance()`, per store or all) — same definitions as `perf-check`:
+- Period selector 7d / 30d / 90d / All (`perfPeriod`, remembered in localStorage, default 30d); each figure shows
+  the previous period of the same length next to it ("last week" / "prev 30d").
+- On time % (orders DELIVERED in the period, ≤ that store's `perf_norm`), Without problems % (orders SHIPPED in
+  the period shifted 14 days back, `PERF_LAG`; problem = current problem status or `action_log` exception history),
+  Delivery time (avg transit, + processing), Delivered count. Footnote `perf-note` explains the 14-day shift.
+- Colour like Slack (green on goal / orange within 10pt resp. 5pt / red below), only per store and with ≥20 orders.
+- Settings panel (hidden on "All stores") saves `perf_*` to `stores`; goal fields are "% on time" and "% without
+  problems" (stored as `perf_alert_exc = 100 − input`). Test saves first, then calls `perf-check?force_weekly=1&store=`
+  (no-cors, token from `app_settings`) so it sends the real weekly report to the saved `perf_webhook`.
 
 **Manage stores modal** — tabs: Add (ParcelPanel setup instructions + webhook URL with token), Remove (type store name to confirm;
 deletes that store's rows in `shipments`, `dismissed`, `action_log`), Slack (per-store `slack_webhook_url`
@@ -164,7 +169,7 @@ is still used by the Slack Test button and shows the alert format.
 User-supplied strings go through `esc()` before `innerHTML`, and through `jsq()` when passed as an argument in an
 inline `onclick`. Keep doing that for new markup.
 
-## Supplier Performance redesign (2026-10-15) — Slack reports DONE (perf-check v18), dashboard (step 2) open
+## Supplier Performance redesign (2026-10-15) — Slack reports + dashboard DONE (perf-check v20)
 
 Decisions by the merchant (2026-10-15):
 - Weekly report is purely about the week, compared with last week (a 30-day figure next to it was confusing).
@@ -179,9 +184,7 @@ Decisions by the merchant (2026-10-15):
 - Dashboard actions don't change the % figures; only "Stuck right now" excludes deleted orders (see perf-check).
 - Merchant wants minimal maintenance: the report must stay correct without manual work in the dashboard.
 
-Still open:
-- Step 2: dashboard `renderPerformance()` + perf Test button still use the OLD all-time calculation and old Slack
-  format. Align with `perf-check` (same definitions) and add a 7/30/90/all period selector.
+Step 2 (dashboard aligned + period selector) DONE 2026-10-15.
 - Separate idea: action section for `READY_FOR_PICKUP` (parcel at pickup point, may be returned).
 - Separate idea: drop customer email from Slack alerts if the channel is shared with the supplier (privacy).
 - Tracking links: BUILT 2026-10-15 (see `shipments.tracking_link` / `webhook_samples`). Still open: verify the
