@@ -50,13 +50,13 @@ Columns used by the dashboard: `order_number`, `customer_name`, `tracking_number
 `tracking_url`/`tracking_page_url`, else `https://<store.domain>/apps/parcelpanel?nums=`), never overwritten with
 null. E&R rows were backfilled with `ellisonrowe.com/apps/parcelpanel`. Dashboard `trackHtml()` and Slack alerts
 fall back to `https://t.17track.net/en#nums=<tracking>` when it's empty.
+`status` is a ParcelPanel status: `PENDING, INFO_RECEIVED, IN_TRANSIT, OUT_FOR_DELIVERY, DELIVERED,
+EXCEPTION, EXPIRED, FAILED_ATTEMPT, CANCELLED, UNKNOWN, READY_FOR_PICKUP, RESOLVED`.
 
 ### `webhook_samples` — first 5 raw ParcelPanel payloads per store
 Written by `webhook` (service role only, RLS on, no policies). Purpose: verify which fields ParcelPanel really
 sends (tracking link? store domain?) — **check this after the first real webhook from a new store** and adjust
 `findTrackingLink()` if needed.
-`status` is a ParcelPanel status: `PENDING, INFO_RECEIVED, IN_TRANSIT, OUT_FOR_DELIVERY, DELIVERED,
-EXCEPTION, EXPIRED, FAILED_ATTEMPT, CANCELLED, UNKNOWN, READY_FOR_PICKUP, RESOLVED`.
 
 ### `action_log` — orders that entered an action section (primary key `id` = `rowId`)
 `id, order_number, customer_name, tracking_number, store_name, order_date, fulfillment_date, section,
