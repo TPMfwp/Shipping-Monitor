@@ -198,12 +198,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
           <input id="perf-webhook" type="url" placeholder="https://hooks.slack.com/..." style="width:100%;border:1px solid #d2d2d7;border-radius:8px;padding:7px 10px;font-size:11px;font-family:monospace;outline:none;">
         </div>
         <div>
-          <div style="font-size:11px;color:#86868b;margin-bottom:4px;">Alert: on time % below</div>
+          <div style="font-size:11px;color:#86868b;margin-bottom:4px;">Goal: % on time</div>
           <input id="perf-alert-ontime" type="number" min="0" max="100" placeholder="e.g. 80" style="width:100%;border:1px solid #d2d2d7;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;">
         </div>
         <div>
-          <div style="font-size:11px;color:#86868b;margin-bottom:4px;">Alert: exceptions % above</div>
-          <input id="perf-alert-exc" type="number" min="0" max="100" placeholder="e.g. 10" style="width:100%;border:1px solid #d2d2d7;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;">
+          <div style="font-size:11px;color:#86868b;margin-bottom:4px;">Goal: % without problems</div>
+          <input id="perf-alert-exc" type="number" min="1" max="99" placeholder="e.g. 95" style="width:100%;border:1px solid #d2d2d7;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;">
         </div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;">
@@ -917,7 +917,8 @@ async function savePerfSettings(){
   const norm=parseInt(document.getElementById('perf-norm').value)||14;
   const webhook=document.getElementById('perf-webhook').value.trim();
   const alert_ontime=parseFloat(document.getElementById('perf-alert-ontime').value)||null;
-  const alert_exc=parseFloat(document.getElementById('perf-alert-exc').value)||null;
+  const clean=parseFloat(document.getElementById('perf-alert-exc').value);
+  const alert_exc=clean>0&&clean<100?100-clean:null;
   await sb.from('stores').upsert({store_name:store,perf_norm:norm,perf_webhook:webhook,perf_alert_ontime:alert_ontime,perf_alert_exc:alert_exc},{onConflict:'store_name'});
   perfSettingsCache[store]={norm,webhook,alert_ontime,alert_exc};
   showPerfMsg('Saved.');
@@ -973,7 +974,8 @@ function loadPerfSettingsUI(){
   document.getElementById('perf-norm').value=s.norm||'';
   document.getElementById('perf-webhook').value=s.webhook||'';
   document.getElementById('perf-alert-ontime').value=s.alert_ontime||'';
-  document.getElementById('perf-alert-exc').value=s.alert_exc||'';
+  // Opgeslagen als max % problemen (perf_alert_exc), getoond als doel % zonder problemen
+  document.getElementById('perf-alert-exc').value=s.alert_exc?100-s.alert_exc:'';
 }
 
 function renderPerformance(){
