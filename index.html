@@ -1091,7 +1091,7 @@ function buildBlocks(header, store, order_number, customer_name, customer_email,
       {type:'mrkdwn',text:`*Customer:*\n${customer_name}`},
       {type:'mrkdwn',text:`*Order date:*\n${order_date}`},
       { type: 'mrkdwn', text: `*Email customer:*\n\`${customer_email||'—'}\`` },
-      {type:'mrkdwn',text:`*Tracking:*\n${tracking}`}
+      {type:'mrkdwn',text:`*Tracking:*\n<https://t.17track.net/en#nums=${encodeURIComponent(tracking)}|${tracking}>`}
     ]},
     {type:'section',text:{type:'mrkdwn',text:body_text}},
     {type:'divider'}
@@ -1135,8 +1135,9 @@ async function testWebhook(store){
   try{
     const today=new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'}).replace(/\//g,'/');
     showSlackMsg('Test berichten versturen...','#86868b');
-    await sendSlack(url,buildBlocks('⏳ Shipment Stuck — Label Created, Not Shipped [EXAMPLE]',store,'#ER971234','Jane Smith','jane.smith@email.com','YT2609100704258978',today,'This shipment has been on "Info Received" status for 5+ days. Why has this order not been shipped yet? Please provide an update. 🙏'),'⏳ Label Not Shipped [EXAMPLE]');
-    await sendSlack(url,buildBlocks('🐌 Shipment Delayed — In Transit 15+ Days [EXAMPLE]',store,'#ER971235','Mary Johnson','mary.johnson@email.com','YT2609100704258979',today,'This shipment has been in transit for 15+ days without delivery. Why has this order not been delivered yet? Please provide an update. 🙏'),'🐌 Delayed In Transit [EXAMPLE]');
+    const t=thr(store);
+    await sendSlack(url,buildBlocks('⏳ Shipment Stuck — Label Created, Not Shipped [EXAMPLE]',store,'#ER971234','Jane Smith','jane.smith@email.com','YT2609100704258978',today,`This shipment has been on "Info Received" status for ${t.ns}+ days. Why has this order not been shipped yet? Please provide an update. 🙏`),'⏳ Label Not Shipped [EXAMPLE]');
+    await sendSlack(url,buildBlocks(`🐌 Shipment Delayed — In Transit ${t.dl}+ Days [EXAMPLE]`,store,'#ER971235','Mary Johnson','mary.johnson@email.com','YT2609100704258979',today,`This shipment has been in transit for ${t.dl}+ days without delivery. Why has this order not been delivered yet? Please provide an update. 🙏`),'🐌 Delayed In Transit [EXAMPLE]');
     await sendSlack(url,buildBlocks('⚠️ Shipment Exception — Action Required [EXAMPLE]',store,'#ER971236','Susan Williams','susan.williams@email.com','YT2609100704258980',today,'This shipment has an exception status. What happened to this order? Please investigate and provide an update. 🙏'),'⚠️ Exception [EXAMPLE]');
     showSlackMsg('Test meldingen verstuurd.','#34c759');
     showSlackMsg('Test melding verstuurd.','#34c759');
