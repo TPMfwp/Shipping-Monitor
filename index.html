@@ -1026,7 +1026,9 @@ async function saveStoreWebhook(store_name, slack_webhook_url){
 const SLACK_FUNCTION_URL='https://frxyfmfjtadyxhfogdvt.supabase.co/functions/v1/slack-notify';
 
 async function sendSlack(webhook_url, blocks, fallback_text){
-  const res=await fetch(SLACK_FUNCTION_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({webhook_url,blocks,text:fallback_text||' '})});
+  // slack-notify accepteert alleen ingelogde gebruikers (of de server-token), dus sessie-token meesturen
+  const{data:{session}}=await sb.auth.getSession();
+  const res=await fetch(SLACK_FUNCTION_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(session?.access_token||'')},body:JSON.stringify({webhook_url,blocks,text:fallback_text||' '})});
   if(!res.ok)throw new Error('slack-notify returned '+res.status);
 }
 
