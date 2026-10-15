@@ -187,6 +187,11 @@ Decisions by the merchant (2026-10-15):
 - Merchant wants minimal maintenance: the report must stay correct without manual work in the dashboard.
 
 Step 2 (dashboard aligned + period selector) DONE 2026-10-15.
+Keep-alive: free-plan projects pause after ~7 days of low activity (Supabase: "a few user requests to the database
+each day"). pg_cron job `keep-alive` (`0 */6 * * *`) does `net.http_get` on `/rest/v1/stores?limit=1` with the public
+publishable key — anon has no SELECT policy, so it returns `[]` (no data exposed) but counts as API activity.
+Added 2026-10-16 because E&R is idle and the weekly cron alone isn't enough. Paused projects can be resumed within 90 days.
+
 Status 2026-10-16: test data (TEST STORE, DEMO GOOD/ALMOST/BAD) fully removed; only Ellison & Rowe remains. E&R is idle
 (last shipment 2026-06-01), so `perf-check` skips it (no weekly report on 19 Oct, no monthly on 2 Nov) until orders
 flow again. Its `perf_webhook` still points at the old `#dayone-supply-chain` webhook — update when a store goes live.
