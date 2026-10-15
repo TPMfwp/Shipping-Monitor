@@ -45,7 +45,16 @@ order per action section.
 
 ### `shipments` — one row per order/tracking, written by the `webhook` function
 Columns used by the dashboard: `order_number`, `customer_name`, `tracking_number`, `status`, `store_name`,
-`order_date`, `fulfillment_date`, `last_updated`, `last_checkpoint_time`.
+`order_date`, `fulfillment_date`, `last_updated`, `last_checkpoint_time`, `tracking_link`.
+`tracking_link` = the store's own tracking page, set by `webhook` (`findTrackingLink()`: payload `tracking_link`/
+`tracking_url`/`tracking_page_url`, else `https://<store.domain>/apps/parcelpanel?nums=`), never overwritten with
+null. E&R rows were backfilled with `ellisonrowe.com/apps/parcelpanel`. Dashboard `trackHtml()` and Slack alerts
+fall back to `https://t.17track.net/en#nums=<tracking>` when it's empty.
+
+### `webhook_samples` — first 5 raw ParcelPanel payloads per store
+Written by `webhook` (service role only, RLS on, no policies). Purpose: verify which fields ParcelPanel really
+sends (tracking link? store domain?) — **check this after the first real webhook from a new store** and adjust
+`findTrackingLink()` if needed.
 `status` is a ParcelPanel status: `PENDING, INFO_RECEIVED, IN_TRANSIT, OUT_FOR_DELIVERY, DELIVERED,
 EXCEPTION, EXPIRED, FAILED_ATTEMPT, CANCELLED, UNKNOWN, READY_FOR_PICKUP, RESOLVED`.
 
@@ -169,11 +178,5 @@ Options discussed:
 - Weekly message currently sends every Monday even when a store is idle — maybe only send if something was delivered.
 - Separate idea: action section for `READY_FOR_PICKUP` (parcel at pickup point, may be returned).
 - Separate idea: drop customer email from Slack alerts if the channel is shared with the supplier (privacy).
-- **Tracking links are not multi-store safe.** `trackHtml()` hardcodes `https://ellisonrowe.com/apps/parcelpanel?nums=`,
-  so for any other store the dashboard link opens the E&R tracking page. Slack alerts show the tracking number as
-  plain text, no link. Plan (not built): `webhook` stores the tracking link ParcelPanel sends, if any
-  (Klaviyo/Omnisend integrations expose `tracking_link` on the store's own domain; whether the webhook payload
-  has it, or a store domain field, is unverified — the merchant thinks ParcelPanel links may be rewritten to
-  Shopify/store-domain links, also unverified). Dashboard + Slack use that link, fallback
-  `https://t.17track.net/en#nums=<tracking>`. Verify against the first real webhook from a new store
-  (log the raw payload once).
+- Tracking links: BUILT 2026-10-15 (see `shipments.tracking_link` / `webhook_samples`). Still open: verify the
+  real ParcelPanel payload fields once a new store sends its first webhook.

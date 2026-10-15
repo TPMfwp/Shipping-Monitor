@@ -459,7 +459,9 @@ function getSection(d){
 function trackHtml(d){
   const t=d.tracking_number;
   if(!t||t==='Unknown')return '<span class="tgray">—</span>';
-  return `<a class="tlink" href="https://ellisonrowe.com/apps/parcelpanel?nums=${encodeURIComponent(t)}" target="_blank">${esc(t)}</a>`;
+  // tracking_link wordt door de webhook-functie gezet (link van de store zelf); anders 17track, werkt voor elke vervoerder
+  const href=/^https?:\/\//.test(d.tracking_link||'')?d.tracking_link:`https://t.17track.net/en#nums=${encodeURIComponent(t)}`;
+  return `<a class="tlink" href="${esc(href)}" target="_blank" rel="noopener">${esc(t)}</a>`;
 }
 function badgeHtml(d){
   const s=d.status||'UNKNOWN';
