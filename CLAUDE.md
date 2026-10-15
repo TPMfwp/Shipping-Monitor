@@ -148,3 +148,24 @@ is still used by the Slack Test button and shows the alert format.
 
 User-supplied strings go through `esc()` before `innerHTML`, and through `jsq()` when passed as an argument in an
 inline `onclick`. Keep doing that for new markup.
+
+## Under consideration — Supplier Performance redesign (2026-10-15, not decided)
+
+Current calc problems (dashboard `renderPerformance()` and `perf-check`, duplicated):
+1. All-time figures → barely move, weekly message ~identical every week, alerts late or stuck on.
+2. "This month" uses only already-delivered orders → slow ones still in transit, so it always looks better.
+3. Exception % counts only orders whose *current* status is an exception; resolved ones drop out. `action_log`
+   (`section='exception'`) has the history. `EXPIRED` isn't always a real problem.
+4. Mean instead of median; a few 60-day orders skew it.
+
+Options discussed:
+- Period: per week alone is too noisy (E&R had 2–224 deliveries/week). Leaning towards: alerts on rolling
+  30 days (by delivery date), weekly Slack message showing last 7 days + last 30 days with order counts,
+  7/30/90/all selector in dashboard, minimum ~20 delivered orders before an alert fires.
+- Exception alert stays an absolute per-store % (not deviation from average) — per-store thresholds already cover that.
+- Rewrite performance Slack texts for the supplier: explain "on time" as "delivered within N days", hide
+  internal "threshold" wording or phrase it as agreed target, add a request ("Could you look into…"), use
+  period counts instead of all-time "Delivered: 1151". Drafts were shown to the merchant in-session.
+- Weekly message currently sends every Monday even when a store is idle — maybe only send if something was delivered.
+- Separate idea: action section for `READY_FOR_PICKUP` (parcel at pickup point, may be returned).
+- Separate idea: drop customer email from Slack alerts if the channel is shared with the supplier (privacy).
