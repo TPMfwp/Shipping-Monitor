@@ -94,7 +94,7 @@ Pages). Rotating it = update the row, then re-paste the URL in ParcelPanel for e
 |---|---|
 | `webhook` | Receives ParcelPanel `shipment_status / any_update` webhooks → rejects with 401 unless `?token=` matches `app_settings.webhook_token` → upserts `shipments` → checks action sections → sends Slack alert via `slack-notify` (once per section, tracked in `action_log.slack_notified_sections`). |
 | `slack-notify` | Thin proxy: `POST {webhook_url, blocks, text}` → posts to the Slack incoming webhook. Requires either `?token=` (used by `webhook`/`perf-check`) or a logged-in session `Authorization: Bearer` (dashboard `sendSlack()` for the "Test" buttons; browser can't post to Slack directly due to CORS). Only accepts `https://hooks.slack.com/` URLs. |
-| `perf-check` | Requires `?token=`. Fetches all shipments (paged, no 1000-row cap) → threshold alerts + weekly performance update to `perf_webhook` (weekly deduped via `perf_weekly_log`). Called every Monday 07:00 UTC by pg_cron job `perf-check-weekly` (pg_net, token read from `app_settings`). Calling it manually sends real Slack alerts — for testing use `&store=<name>` (only that store) and `&force_weekly=1` (weekly message outside Monday, doesn't write `perf_weekly_log`). |
+| `perf-check` | Requires `?token=`. Fetches all shipments + `action_log` (paged). Per store: last 7 / last 30 / previous 30 days — on-time % and average over orders **delivered** in the period (`last_checkpoint_time`), problem % over orders **shipped** in the period that ever had a problem status (current status or `action_log` exception). Alert ("Delivery Performance Below Target", supplier-facing wording) on last 30 days, only with ≥ 20 orders. Weekly "Weekly Delivery Update" shows 7 + 30 days side by side (deduped via `perf_weekly_log`). Dashboard `renderPerformance()` still uses the OLD all-time calc (step 2 of the redesign). Called every Monday 07:00 UTC by pg_cron job `perf-check-weekly` (pg_net, token read from `app_settings`). Calling it manually sends real Slack alerts — for testing use `&store=<name>` (only that store) and `&force_weekly=1` (weekly message outside Monday, doesn't write `perf_weekly_log`). |
 | `Import` | Old Shopify+ParcelPanel bulk import used by `import.html`. **Inactive.** |
 
 New stores connect by adding a ParcelPanel webhook (Professional plan) pointing at
@@ -160,7 +160,7 @@ is still used by the Slack Test button and shows the alert format.
 User-supplied strings go through `esc()` before `innerHTML`, and through `jsq()` when passed as an argument in an
 inline `onclick`. Keep doing that for new markup.
 
-## Under consideration — Supplier Performance redesign (2026-10-15, not decided)
+## Supplier Performance redesign (2026-10-15) — step 1 (Slack/perf-check) DONE, step 2 (dashboard) and step 3 (skip weekly when idle) open
 
 Current calc problems (dashboard `renderPerformance()` and `perf-check`, duplicated):
 1. All-time figures → barely move, weekly message ~identical every week, alerts late or stuck on.
