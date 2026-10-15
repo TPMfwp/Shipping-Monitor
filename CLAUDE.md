@@ -4,6 +4,33 @@ Multi-store shipment tracking dashboard. ParcelPanel tracking updates flow into 
 dashboard on GitHub Pages reads them and shows which orders need action; Slack gets notified once per
 order per action section.
 
+## Status (2026-10-16): DONE — ready for the next store
+
+The merchant confirmed the system is finished. Everything below is live, tested and documented in this file.
+Ellison & Rowe is the only store; it has been idle since June, so it gets no reports or alerts until orders flow again.
+
+Built/fixed 2026-10-15/16:
+- **Security**: `webhook` + `perf-check` require `?token=` (`app_settings.webhook_token`, never in the repo);
+  `slack-notify` needs token or login and only posts to hooks.slack.com; `esc()`/`jsq()` escaping in the dashboard.
+- **Alerts**: per-store day thresholds (Alerts tab), tracking links (store page + 17track), one alert per order per
+  section, and a **daily sweep** (07:00 UTC) so stuck/delayed alerts also fire when ParcelPanel sends no more updates.
+- **Reports**: weekly report every Monday (week vs last week) + monthly report on the first Monday (previous month);
+  facts only, positive framing ("on time", "without problems"), no verdict under 20 orders, idle stores skipped.
+- **Dashboard**: Supplier Performance uses the same calculation as the reports, with a 7d/30d/90d/All selector;
+  goals entered as "% on time" / "% without problems"; Test sends the real weekly report.
+- **Remove store**: RPC `remove_store` deletes everything of a store in one transaction (client deletes used to fail
+  silently); confirm button reacts while typing.
+- **Free-plan safety**: `keep-alive` cron every 6h (prevents pausing), incremental refresh + no refresh in hidden tabs
+  (egress), usage line in the header (database exact, data estimate; orange 60%, red 80%).
+- **Test data** (TEST STORE, DEMO stores) fully removed.
+
+Scheduled jobs (pg_cron): `perf-check-weekly` (Mon 07:00 UTC), `alert-sweep` (daily 07:00 UTC), `keep-alive` (every 6h).
+
+When the next store goes live: set its Slack webhooks (alerts: Manage stores → Slack; reports: Supplier Performance →
+Settings), check the first rows in `webhook_samples` for the tracking-link fields, and update E&R's old `perf_webhook`
+if that store comes back. Open ideas only (see the end of this file): READY_FOR_PICKUP section, customer email out of
+Slack for shared channels, egress plan when the usage line turns orange.
+
 ## Working agreement
 
 - **Only edit `index.html`.** No frameworks, no build step, no npm — plain vanilla HTML/CSS/JS in one file.
