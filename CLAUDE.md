@@ -169,3 +169,11 @@ Options discussed:
 - Weekly message currently sends every Monday even when a store is idle — maybe only send if something was delivered.
 - Separate idea: action section for `READY_FOR_PICKUP` (parcel at pickup point, may be returned).
 - Separate idea: drop customer email from Slack alerts if the channel is shared with the supplier (privacy).
+- **Tracking links are not multi-store safe.** `trackHtml()` hardcodes `https://ellisonrowe.com/apps/parcelpanel?nums=`,
+  so for any other store the dashboard link opens the E&R tracking page. Slack alerts show the tracking number as
+  plain text, no link. Plan (not built): `webhook` stores the tracking link ParcelPanel sends, if any
+  (Klaviyo/Omnisend integrations expose `tracking_link` on the store's own domain; whether the webhook payload
+  has it, or a store domain field, is unverified — the merchant thinks ParcelPanel links may be rewritten to
+  Shopify/store-domain links, also unverified). Dashboard + Slack use that link, fallback
+  `https://t.17track.net/en#nums=<tracking>`. Verify against the first real webhook from a new store
+  (log the raw payload once).
