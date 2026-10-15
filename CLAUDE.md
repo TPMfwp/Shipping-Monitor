@@ -151,7 +151,9 @@ filter; table is sortable, 100 rows per page. Store tabs are derived from distin
   (no-cors, token from `app_settings`) so it sends the real weekly report to the saved `perf_webhook`.
 
 **Manage stores modal** — tabs: Add (ParcelPanel setup instructions + webhook URL with token), Remove (type store name to confirm;
-deletes that store's rows in `shipments`, `dismissed`, `action_log`), Slack (per-store `slack_webhook_url`
+calls RPC `remove_store(p_store)` — SECURITY DEFINER, authenticated only — which deletes the store's rows in `shipments`,
+`action_log`, `dismissed`, `perf_weekly_log`, `webhook_samples` and `stores` in one transaction. Before 2026-10-16 it did
+separate client deletes, which silently removed 0 shipments (no DELETE policy) and the reload re-created `action_log` rows), Slack (per-store `slack_webhook_url`
 save + Test, which sends 3 example alerts via `slack-notify`), Alerts (per-store not-shipped/delayed days).
 
 `notifySlack()` is a no-op — notifications moved server-side into the `webhook` function. `buildBlocks()`

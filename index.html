@@ -833,9 +833,12 @@ async function removeStore(){
   const btn=document.getElementById('remove-btn');
   btn.textContent='Removing...';
   btn.disabled=true;
-  await sb.from('shipments').delete().eq('store_name',store);
-  await sb.from('dismissed').delete().eq('store_name',store);
-  await sb.from('action_log').delete().eq('store_name',store);
+  // Eén databasefunctie verwijdert alles van de store (orders, logs, instellingen, rapportlog) in één transactie.
+  // Losse deletes vanuit de browser faalden stil: shipments heeft geen DELETE-policy, dus 0 rijen zonder foutmelding.
+  const{error}=await sb.rpc('remove_store',{p_store:store});
+  if(error){btn.textContent='Failed: '+error.message;btn.disabled=false;return;}
+  btn.textContent='Remove store';
+  if(curStore===store)curStore='all';
   hideManageStores();
   await loadData();
 }
