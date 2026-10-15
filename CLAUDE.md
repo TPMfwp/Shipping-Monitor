@@ -174,7 +174,8 @@ Decisions by the merchant (2026-10-15):
   carrier X" was removed because it ignores how many orders each carrier ships.
 - Fewer than 20 orders → numbers shown but no colour/verdict.
 - Positive framing: report shows "% without problems" (goal 95%) instead of "% delivery problems" (max 5%).
-  The dashboard setting/labels in Manage stores still say exceptions % — align in step 2.
+  Dashboard Performance settings input "Goal: % without problems" (e.g. 95) — saved as `perf_alert_exc = 100 − input`, so
+  the DB column and `perf-check` keep the "max % problems" meaning (`9d5915b`).
 - Dashboard actions don't change the % figures; only "Stuck right now" excludes deleted orders (see perf-check).
 - Merchant wants minimal maintenance: the report must stay correct without manual work in the dashboard.
 
