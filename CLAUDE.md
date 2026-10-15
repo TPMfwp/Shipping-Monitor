@@ -187,6 +187,11 @@ Decisions by the merchant (2026-10-15):
 - Merchant wants minimal maintenance: the report must stay correct without manual work in the dashboard.
 
 Step 2 (dashboard aligned + period selector) DONE 2026-10-15.
+Status 2026-10-16: test data (TEST STORE, DEMO GOOD/ALMOST/BAD) fully removed; only Ellison & Rowe remains. E&R is idle
+(last shipment 2026-06-01), so `perf-check` skips it (no weekly report on 19 Oct, no monthly on 2 Nov) until orders
+flow again. Its `perf_webhook` still points at the old `#dayone-supply-chain` webhook — update when a store goes live.
+
+Ideas for later (not started):
 - Separate idea: action section for `READY_FOR_PICKUP` (parcel at pickup point, may be returned).
 - Separate idea: drop customer email from Slack alerts if the channel is shared with the supplier (privacy).
 - Tracking links: BUILT 2026-10-15 (see `shipments.tracking_link` / `webhook_samples`). Still open: verify the
