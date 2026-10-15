@@ -459,9 +459,9 @@ function getSection(d){
 function trackHtml(d){
   const t=d.tracking_number;
   if(!t||t==='Unknown')return '<span class="tgray">—</span>';
-  // tracking_link wordt door de webhook-functie gezet (link van de store zelf); anders 17track, werkt voor elke vervoerder
-  const href=/^https?:\/\//.test(d.tracking_link||'')?d.tracking_link:`https://t.17track.net/en#nums=${encodeURIComponent(t)}`;
-  return `<a class="tlink" href="${esc(href)}" target="_blank" rel="noopener">${esc(t)}</a>`;
+  // Nummer → storepagina (tracking_link, gezet door de webhook-functie) of 17track; bij een storepagina ook een los 17track-linkje
+  const t17=`https://t.17track.net/en#nums=${encodeURIComponent(t)}`,own=/^https?:\/\//.test(d.tracking_link||'');
+  return `<a class="tlink" href="${esc(own?d.tracking_link:t17)}" target="_blank" rel="noopener">${esc(t)}</a>`+(own?` <a href="${t17}" target="_blank" rel="noopener" style="font-size:10px;color:#86868b;text-decoration:none;margin-left:4px;">17track</a>`:'');
 }
 function badgeHtml(d){
   const s=d.status||'UNKNOWN';
@@ -1091,7 +1091,7 @@ function buildBlocks(header, store, order_number, customer_name, customer_email,
       {type:'mrkdwn',text:`*Customer:*\n${customer_name}`},
       {type:'mrkdwn',text:`*Order date:*\n${order_date}`},
       { type: 'mrkdwn', text: `*Email customer:*\n\`${customer_email||'—'}\`` },
-      {type:'mrkdwn',text:`*Tracking:*\n<https://t.17track.net/en#nums=${encodeURIComponent(tracking)}|${tracking}>`}
+      {type:'mrkdwn',text:`*Tracking:*\n${tracking}\n<https://t.17track.net/en#nums=${encodeURIComponent(tracking)}|17track>`}
     ]},
     {type:'section',text:{type:'mrkdwn',text:body_text}},
     {type:'divider'}

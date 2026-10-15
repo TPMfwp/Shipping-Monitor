@@ -49,7 +49,9 @@ Columns used by the dashboard: `order_number`, `customer_name`, `tracking_number
 `tracking_link` = the store's own tracking page, set by `webhook` (`findTrackingLink()`: payload `tracking_link`/
 `tracking_url`/`tracking_page_url`, else `https://<store.domain>/apps/parcelpanel?nums=`), never overwritten with
 null. E&R rows were backfilled with `ellisonrowe.com/apps/parcelpanel`. Dashboard `trackHtml()` and Slack alerts
-fall back to `https://t.17track.net/en#nums=<tracking>` when it's empty.
+fall back to `https://t.17track.net/en#nums=<tracking>` when it's empty. When a store link exists, both are shown
+(dashboard: number → store page + small "17track" link; Slack: number + "Store page · 17track"). Customers never see
+these links — they only get ParcelPanel's own tracking page via the store.
 `status` is a ParcelPanel status: `PENDING, INFO_RECEIVED, IN_TRANSIT, OUT_FOR_DELIVERY, DELIVERED,
 EXCEPTION, EXPIRED, FAILED_ATTEMPT, CANCELLED, UNKNOWN, READY_FOR_PICKUP, RESOLVED`.
 
