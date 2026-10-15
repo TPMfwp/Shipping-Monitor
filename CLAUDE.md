@@ -140,11 +140,11 @@ Restore removes the `dismissed` and `action_log` rows (item can re-enter and re-
 filter; table is sortable, 100 rows per page. Store tabs are derived from distinct `store_name` in shipments.
 
 **Supplier Performance** (`renderPerformance()`, per store or all) — same definitions as `perf-check`:
-- Period selector 7d / 30d / 90d / All (`perfPeriod`, remembered in localStorage, default 30d); each figure shows
+- Period selector 7d / 30d / 90d / All (`perfPeriod`, always starts on All — idle stores looked broken on 30d); each figure shows
   the previous period of the same length next to it ("last week" / "prev 30d").
 - On time % (orders DELIVERED in the period, ≤ that store's `perf_norm`), Without problems % (orders SHIPPED in
   the period shifted 14 days back, `PERF_LAG`; problem = current problem status or `action_log` exception history),
-  Delivery time (avg transit, + processing), Delivered count. Footnote `perf-note` explains the 14-day shift.
+  Delivery time (avg transit, + processing), Delivered count. Footnote `perf-note` shows the shipped-date range used for Without problems, or "No orders in the last N days".
 - Colour like Slack (green on goal / orange within 10pt resp. 5pt / red below), only per store and with ≥20 orders.
 - Settings panel (hidden on "All stores") saves `perf_*` to `stores`; goal fields are "% on time" and "% without
   problems" (stored as `perf_alert_exc = 100 − input`). Test saves first, then calls `perf-check?force_weekly=1&store=`

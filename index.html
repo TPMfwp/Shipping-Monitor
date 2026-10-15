@@ -978,8 +978,9 @@ function loadPerfSettingsUI(){
 // - zonder problemen: orders VERZONDEN in de periode, 14 dagen terug (nieuwere hebben nog geen tijd gehad om vast te lopen),
 //   probleem = huidige probleemstatus of ooit in de exception-sectie (action_log)
 const PERF_MIN=20, PERF_LAG=14, PROBLEM_ST=['EXCEPTION','EXPIRED','FAILED_ATTEMPT'];
-let perfPeriod=(()=>{try{return localStorage.getItem('perfPeriod')||'30';}catch(e){return '30';}})();
-function setPerfPeriod(p){perfPeriod=p;try{localStorage.setItem('perfPeriod',p);}catch(e){}renderPerformance();}
+// Start altijd op All: bij een stille store zijn 7/30/90 dagen leeg en lijkt het alsof er iets mis is
+let perfPeriod='all';
+function setPerfPeriod(p){perfPeriod=p;renderPerformance();}
 const perfMean=xs=>xs.length?Math.round(xs.reduce((a,b)=>a+b,0)/xs.length):null;
 const perfIn=(d,from,to)=>{if(!d)return false;const t=new Date(d).getTime();return t>=from&&t<to;};
 function perfDelivery(data,from,to){
@@ -1025,7 +1026,9 @@ function renderPerformance(){
   set('perf-avg-delta',join([cur.proc!==null?`+ ${cur.proc}d processing`:'',prev&&prev.transit!==null?`${prevL}: ${prev.transit}d`:'']));
   set('perf-delivered',cur.n);
   set('perf-delivered-delta',N?(prev?`${prevL}: ${prev.n}`:''):'all time');
-  set('perf-note',`Delivery time = shipped → delivered. Without problems looks at orders shipped ${N?`${N} days, ending `:''}${PERF_LAG} days ago — newer orders haven't had time to run into problems.`);
+  const fd=t=>new Date(t).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+  set('perf-note',!cur.n&&!pc.n&&N?`No orders in the last ${N} days — choose All to see everything.`
+    :`Without problems counts orders shipped ${N?`${fd(now-lag-N*D)} – ${fd(now-lag)}`:`before ${fd(now-lag)}`}. Newer orders are left out because they're still on their way.`);
 }
 
 // ── Slack integration ────────────────────────────────────────────────────────
