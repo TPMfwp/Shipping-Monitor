@@ -15,6 +15,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
 .pulse{width:7px;height:7px;border-radius:50%;background:#34c759;animation:pulse 2s infinite;flex-shrink:0;}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
 .rlabel{font-size:12px;color:#86868b;}
+#usage-line{font-size:11px;color:#86868b;text-align:right;margin-top:8px;}
+#usage-line:empty{display:none;}
 .btn{border-radius:10px;padding:7px 14px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid #d2d2d7;background:white;color:#1d1d1f;}
 .btn:hover{background:#f5f5f7;}
 .store-tabs{display:flex;gap:6px;margin-bottom:1.5rem;flex-wrap:wrap;align-items:center;}
@@ -131,11 +133,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
       <h1>Shipping Monitor</h1>
       <p id="sublabel">Loading...</p>
     </div>
-    <div class="hright">
-      <span class="pulse"></span>
-      <span class="rlabel" id="rlabel">Auto-refresh every 60s</span>
-      <button class="btn" onclick="loadData(true)">Refresh now</button>
-      <button class="btn" onclick="showManageStores()">Manage stores</button>
+    <div>
+      <div class="hright">
+        <span class="pulse"></span>
+        <span class="rlabel" id="rlabel">Live</span>
+        <button class="btn" onclick="loadData(true)">Refresh now</button>
+        <button class="btn" onclick="showManageStores()">Manage stores</button>
+      </div>
+      <div id="usage-line" title="Supabase free plan: 500 MB database, 5 GB data per month. Data is an estimate of what this dashboard downloads."></div>
     </div>
   </div>
 
@@ -860,15 +865,35 @@ async function fetchShipments(filter){
   }
   return data;
 }
+// Supabase-verbruik: databasegrootte (exact) + dataverkeer deze maand (schatting: wat dit dashboard ophaalt, gemeten
+// gzip-gecomprimeerd zoals over de lijn, opgeteld in usage_egress via add_egress). Grijs < 60%, oranje < 80%, rood daarboven.
+async function gzBytes(obj){
+  const s=JSON.stringify(obj);
+  try{const r=new Response(new Blob([s]).stream().pipeThrough(new CompressionStream('gzip')));return (await r.arrayBuffer()).byteLength;}
+  catch(e){return Math.round(s.length/6);}
+}
+async function trackUsage(fetched,full){
+  try{
+    const bytes=(await gzBytes(fetched))+(await gzBytes(actionLogCache))+(await gzBytes(dismissedCache));
+    await sb.rpc('add_egress',{p_bytes:bytes});
+    if(!full&&document.getElementById('usage-line').textContent)return;
+    const{data}=await sb.rpc('usage_stats');
+    if(!data)return;
+    const part=(v,max,unit,div,dec)=>{const pct=v/max;const c=pct>=0.8?'#ff3b30':pct>=0.6?'#ff9500':'#86868b';return `<span style="color:${c}">${(v/div).toFixed(dec)}/${max/div} ${unit}</span>`;};
+    document.getElementById('usage-line').innerHTML=`Database ${part(data.db_bytes,500e6,'MB',1e6,0)} · Data this month ~${part(data.egress_bytes,5e9,'GB',1e9,2)}`;
+  }catch(e){}
+}
+
 async function loadData(full){
   if(!sb)return;
   document.getElementById('rlabel').textContent='Refreshing...';
   try{
+    let fetched,wasFull=false;
     if(full===true||!shipCursor||Date.now()-lastFull>FULL_EVERY){
-      all=await fetchShipments(null);
-      lastFull=Date.now();
+      all=fetched=await fetchShipments(null);
+      lastFull=Date.now();wasFull=true;
     }else{
-      const changed=await fetchShipments(shipCursor);
+      const changed=fetched=await fetchShipments(shipCursor);
       if(changed.length){
         const byId=new Map(all.map(d=>[d.id,d]));
         changed.forEach(d=>byId.set(d.id,d));
@@ -889,7 +914,8 @@ async function loadData(full){
     renderTable();
     renderPerformance();
     document.getElementById('sublabel').textContent=`${all.length} shipments — updated ${new Date().toLocaleTimeString()}`;
-    document.getElementById('rlabel').textContent='Auto-refresh every 60s';
+    document.getElementById('rlabel').textContent='Live';
+    trackUsage(fetched,wasFull);
   }catch(e){document.getElementById('rlabel').textContent='Error: '+e.message;}
 }
 

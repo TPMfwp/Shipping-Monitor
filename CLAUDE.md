@@ -156,6 +156,13 @@ minus 2 min), merged into `all` by `id`. Paused while the tab is hidden (`docume
 (`visibilitychange`). Built 2026-10-16 to keep egress low (free plan 5 GB; was 0.09 GB). Rows changed outside the webhook
 without touching `last_updated` only show up on the next full load.
 
+**Usage line** (`usage-line`, under the header buttons): "Database X/500 MB · Data this month ~Y/5 GB" (free-plan
+limits). DB = RPC `usage_stats()` (sum of `pg_database_size` over all DBs, matches Supabase's figure). Data = estimate:
+after each refresh `trackUsage()` gzips what was just fetched (shipments + `action_log` + `dismissed`) in the browser and
+adds it via RPC `add_egress()` to `usage_egress` (per calendar month, all devices). Grey < 60%, orange < 80%, red above.
+Supabase's own Usage page stays the source of truth (billing cycle ≠ calendar month, other egress not counted).
+Header label is just "Live" (refresh details above).
+
 **Manage stores modal** — tabs: Add (ParcelPanel setup instructions + webhook URL with token), Remove (type store name to confirm;
 calls RPC `remove_store(p_store)` — SECURITY DEFINER, authenticated only — which deletes the store's rows in `shipments`,
 `action_log`, `dismissed`, `perf_weekly_log`, `webhook_samples` and `stores` in one transaction. Before 2026-10-16 it did
