@@ -80,7 +80,7 @@ Pages). Rotating it = update the row, then re-paste the URL in ParcelPanel for e
 | Function | Role |
 |---|---|
 | `webhook` | Receives ParcelPanel `shipment_status / any_update` webhooks → rejects with 401 unless `?token=` matches `app_settings.webhook_token` → upserts `shipments` → checks action sections → sends Slack alert via `slack-notify` (once per section, tracked in `action_log.slack_notified_sections`). |
-| `slack-notify` | Thin proxy: `POST {webhook_url, blocks, text}` → posts to the Slack incoming webhook. Also called directly from the dashboard for "Test" buttons (browser can't post to Slack directly due to CORS). |
+| `slack-notify` | Thin proxy: `POST {webhook_url, blocks, text}` → posts to the Slack incoming webhook. Requires either `?token=` (used by `webhook`/`perf-check`) or a logged-in session `Authorization: Bearer` (dashboard `sendSlack()` for the "Test" buttons; browser can't post to Slack directly due to CORS). Only accepts `https://hooks.slack.com/` URLs. |
 | `perf-check` | Requires `?token=`. Fetches all shipments (paged, no 1000-row cap) → threshold alerts + weekly performance update to `perf_webhook` (weekly deduped via `perf_weekly_log`). Called every Monday 07:00 UTC by pg_cron job `perf-check-weekly` (pg_net, token read from `app_settings`). Calling it manually sends real Slack alerts. |
 | `Import` | Old Shopify+ParcelPanel bulk import used by `import.html`. **Inactive.** |
 
