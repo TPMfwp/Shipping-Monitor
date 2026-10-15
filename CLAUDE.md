@@ -203,6 +203,10 @@ Status 2026-10-16: test data (TEST STORE, DEMO GOOD/ALMOST/BAD) fully removed; o
 flow again. Its `perf_webhook` still points at the old `#dayone-supply-chain` webhook — update when a store goes live.
 
 Ideas for later (not started):
+- Scale estimate (2026-10-16) for 3 stores × 2,000 orders/month: DB ±6 MB/month (≈6 years to 500 MB), function
+  invocations fine, but egress grows because full loads fetch ALL shipments ever — roughly 5 GB/month after ~10–12
+  months (rough; depends on compression and how long the dashboard is open). Fix when egress > 3 GB: dashboard loads
+  only the last ~120 days by default; Supplier Performance "All" fetches older rows on demand.
 - Separate idea: action section for `READY_FOR_PICKUP` (parcel at pickup point, may be returned).
 - Separate idea: drop customer email from Slack alerts if the channel is shared with the supplier (privacy).
 - Tracking links: BUILT 2026-10-15 (see `shipments.tracking_link` / `webhook_samples`). Still open: verify the
