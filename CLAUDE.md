@@ -42,6 +42,11 @@ Slack for shared channels, egress plan when the usage line turns orange.
 - UI copy is mostly English; some Slack-settings copy and status messages are Dutch. Keep the language
   of the surrounding text.
 - Code style: dense, minified-ish one-liners, inline styles in the HTML, short names. Match it.
+- **Slack messages** (alerts, reports, any new message) — the merchant's fixed rules:
+  - Always a blank line directly after the main header.
+  - Scannable: two columns (Slack section `fields`), no blocks of prose, neutral tone, facts only.
+  - The dividers above and below an alert stay.
+  - Approved pattern: header → Store/Order/Customer/Amount in two columns → question to the supplier.
 
 ## Files
 
