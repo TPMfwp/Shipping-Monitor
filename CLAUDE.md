@@ -131,11 +131,11 @@ clasp logged in as the sheet owner; after `clasp push` run `clasp deploy -i <dep
 writes the black columns. `webhook` POSTs `{source:'shipping-monitor', tab, alert, ...}` after each Slack alert (also from the
 sweep), and `{type:'status', ...}` (Current Status + Last Checkpoint) in the background on later updates of orders that
 already had an alert. No secret: the long `/exec` link is the secret; the script ignores bodies without `source`.
-Sheet menu: Setup (builds tabs, safe to re-run), Make live + copy link (`goLive()`: finds the existing web-app deployment via the
-Apps Script API, or creates version + deployment; needs the Apps Script API on for the owner account; never use
-`ScriptApp.getService().getUrl()` from the menu — it returns a wrong `/exec` link that 404s), Test. New store: duplicate an
-empty template sheet → Setup → Make live + copy link → paste the `/exec` link in the dashboard. E&R live deployment:
-`AKfycbzXUp2w…` @2 (older code, still fine; HEAD has the new menu).
+Sheet menu: Setup (builds tabs, safe to re-run), Make live (opens the Apps Script editor + steps: Deploy → New deployment →
+Web app, Me, Anyone → copy URL; automating it via the Apps Script API fails because a bound script's default GCP project
+can't enable that API — the merchant wants no Google Cloud; never use `ScriptApp.getService().getUrl()` from the menu, it
+returns a wrong `/exec` link that 404s), Test. New store: duplicate an empty template sheet → Setup → Make live → paste the
+`/exec` link in the dashboard. E&R live deployment: `AKfycbzXUp2w…` @2.
 `shipments.products` (text, "x1 Title - Variant" per line) is stored from ParcelPanel `products[]` since v19.
 
 ### `perf_weekly_log`
