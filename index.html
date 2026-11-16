@@ -1169,7 +1169,7 @@ async function testWebhook(store){
     const t=thr(store);
     await sendSlack(url,buildBlocks('⏳ Shipment Stuck — Label Created, Not Shipped [EXAMPLE]',store,'#ER971234','Jane Smith','jane.smith@email.com','YT2609100704258978',today,`This shipment has been on "Info Received" status for ${t.ns}+ days. Why has this order not been shipped yet? Please provide an update. 🙏`),'⏳ Label Not Shipped [EXAMPLE]');
     await sendSlack(url,buildBlocks(`🐌 Shipment Delayed — In Transit ${t.dl}+ Days [EXAMPLE]`,store,'#ER971235','Mary Johnson','mary.johnson@email.com','YT2609100704258979',today,`This shipment has been in transit for ${t.dl}+ days without delivery. Why has this order not been delivered yet? Please provide an update. 🙏`),'🐌 Delayed In Transit [EXAMPLE]');
-    await sendSlack(url,buildBlocks('⚠️ Shipment Exception — Action Required [EXAMPLE]',store,'#ER971236','Susan Williams','susan.williams@email.com','YT2609100704258980',today,'This shipment has an exception status. What happened to this order? Please investigate and provide an update. 🙏'),'⚠️ Exception [EXAMPLE]');
+    await sendSlack(url,buildBlocks('⚠️ Shipment Exception — Action Required [EXAMPLE]',store,'#ER971236','Susan Williams','susan.williams@email.com','YT2609100704258980',today,'This shipment has an exception status. Please investigate and provide an update. 🙏'),'⚠️ Exception [EXAMPLE]');
     showSlackMsg('Test meldingen verstuurd.','#34c759');
     showSlackMsg('Test melding verstuurd.','#34c759');
   }catch(e){
