@@ -1028,7 +1028,8 @@ function loadPerfSettingsUI(){
 }
 
 // Zelfde definities als perf-check (Slack-rapport), zodat dashboard en rapport dezelfde cijfers geven:
-// - on time/levertijd: orders BEZORGD in de periode; transit = verzonden → bezorgd, verwerking = besteld → verzonden
+// - on time/levertijd: orders BEZORGD in de periode; levertijd = verzonden (label) → bezorgd, verwerking = besteld → verzonden
+//   wachten op ophalen = label → opgehaald (pickup_date), alleen voor orders waar ParcelPanel dat meestuurde
 // - zonder problemen: orders VERZONDEN in de periode, 14 dagen terug (nieuwere hebben nog geen tijd gehad om vast te lopen),
 //   probleem = huidige probleemstatus of ooit in de exception-sectie (action_log)
 const PERF_MIN=20, PERF_LAG=14, PROBLEM_ST=['EXCEPTION','EXPIRED','FAILED_ATTEMPT'];
@@ -1040,10 +1041,11 @@ const perfIn=(d,from,to)=>{if(!d)return false;const t=new Date(d).getTime();retu
 function perfDelivery(data,from,to){
   const normOf=d=>(perfSettingsCache[d.store_name]||{}).norm||14;
   const del=data.filter(d=>d.status==='DELIVERED'&&d.fulfillment_date&&perfIn(d.last_checkpoint_time,from,to))
-    .map(d=>({tr:Math.floor((new Date(d.last_checkpoint_time)-new Date(d.fulfillment_date))/86400000),pr:d.order_date?Math.floor((new Date(d.fulfillment_date)-new Date(d.order_date))/86400000):null,norm:normOf(d)}))
+    .map(d=>{const tr=Math.floor((new Date(d.last_checkpoint_time)-new Date(d.fulfillment_date))/86400000),w=d.pickup_date?Math.floor((new Date(d.pickup_date)-new Date(d.fulfillment_date))/86400000):null;
+      return {tr,wait:w!==null&&w>=0&&w<=60&&w<=tr?w:null,pr:d.order_date?Math.floor((new Date(d.fulfillment_date)-new Date(d.order_date))/86400000):null,norm:normOf(d)};})
     .filter(x=>x.tr>=0&&x.tr<=120);
   const ok=del.filter(x=>x.tr<=x.norm).length;
-  return {n:del.length,onTime:del.length?Math.round(ok/del.length*100):null,transit:perfMean(del.map(x=>x.tr)),proc:perfMean(del.filter(x=>x.pr!==null&&x.pr>=0&&x.pr<=60).map(x=>x.pr))};
+  return {n:del.length,onTime:del.length?Math.round(ok/del.length*100):null,transit:perfMean(del.map(x=>x.tr)),wait:perfMean(del.filter(x=>x.wait!==null).map(x=>x.wait)),proc:perfMean(del.filter(x=>x.pr!==null&&x.pr>=0&&x.pr<=60).map(x=>x.pr))};
 }
 function perfProblems(data,probIds,from,to){
   const sh=data.filter(d=>perfIn(d.fulfillment_date,from,to));
@@ -1077,7 +1079,7 @@ function renderPerformance(){
   set('perf-exc',pc.clean!==null?pc.clean+'%':'—',color(pc.clean,goalClean,pc.n,5));
   set('perf-exc-delta',join([goalClean!==null?`goal ${goalClean}%`:'',pp&&pp.clean!==null?`${prevL}: ${pp.clean}%`:'',few(pc.n)]));
   set('perf-avg',cur.transit!==null?cur.transit+'d':'—');
-  set('perf-avg-delta',join([cur.proc!==null?`+ ${cur.proc}d processing`:'',prev&&prev.transit!==null?`${prevL}: ${prev.transit}d`:'']));
+  set('perf-avg-delta',join([cur.proc!==null?`+ ${cur.proc}d processing`:'',cur.wait!==null?`incl. ${cur.wait}d waiting for pickup`:'',prev&&prev.transit!==null?`${prevL}: ${prev.transit}d`:'']));
   set('perf-delivered',cur.n);
   set('perf-delivered-delta',N?(prev?`${prevL}: ${prev.n}`:''):'all time');
   // Alleen een melding bij een lege periode, anders leeg (uitleg maakte het blok alleen drukker)
