@@ -120,6 +120,20 @@ sections. Snapshot of the shipment + `dismissed_at`. Restore deletes the row (an
 (performance alerts), `perf_alert_ontime` (alert if on-time % below), `perf_alert_exc` (alert if exception % above),
 `alert_not_shipped_days` (default 5) and `alert_delayed_days` (default 15) — the per-store action-section thresholds,
 edited in Manage stores → Alerts. A store without a `stores` row uses 5/15.
+`sheet_url` (2026-11-16) = web-app `/exec` link of the store's Google Sheet, set in Slack settings → "Google Sheet link".
+
+### Google Sheet per store (2026-11-16, webhook v19)
+Each store can have its own Google Sheet with a **bound** Apps Script (local clasp copy: `~/Projects/Shipping-Monitor Sheet (bound clasp)/`,
+clasp logged in as the sheet owner; after `clasp push` run `clasp deploy -i <deploymentId>` so the `/exec` link stays the same).
+4 tabs = the alert types: Stuck, Delayed (+ 30-day reminder), Exception (+ Exception Changed), Pickup point. Row 1 purple
+`#a26e87` "AUTOMATED (Do not edit)" over columns A–L, black `#2c2c33` bar over 3 manual columns (content not decided yet),
+2 rows frozen. One row per order per tab (matched on tracking #): a follow-up alert updates the same row. The script never
+writes the black columns. `webhook` POSTs `{source:'shipping-monitor', tab, alert, ...}` after each Slack alert (also from the
+sweep), and `{type:'status', ...}` (Current Status + Last Checkpoint) in the background on later updates of orders that
+already had an alert. No secret: the long `/exec` link is the secret; the script ignores bodies without `source`.
+Sheet menu: Setup (builds tabs, safe to re-run), Link for monitor, Test. New store: duplicate an empty template sheet →
+Deploy → New deployment → Web app (Execute as Me, Anyone) → paste the `/exec` link in the dashboard.
+`shipments.products` (text, "x1 Title - Variant" per line) is stored from ParcelPanel `products[]` since v19.
 
 ### `perf_weekly_log`
 Dedup + record: one row per store per sent report. `week` = Monday date (`2026-10-19`) for the weekly report, `month-YYYY-MM` (the month reported on) for the monthly report. Holds that report's figures (ontime/problem %, proc/transit days, counts). Comparisons in the reports are computed live from `shipments`, NOT from this table.
