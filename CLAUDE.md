@@ -125,9 +125,11 @@ edited in Manage stores → Alerts. A store without a `stores` row uses 5/15.
 ### Google Sheet per store (2026-11-16, webhook v19)
 Each store can have its own Google Sheet with a **bound** Apps Script (local clasp copy: `~/Projects/Shipping-Monitor Sheet (bound clasp)/`,
 clasp logged in as the sheet owner; after `clasp push` run `clasp deploy -i <deploymentId>` so the `/exec` link stays the same).
-4 tabs = the alert types: Stuck, Delayed (+ 30-day reminder), Exception (+ Exception Changed), Pickup point. Row 1 purple
-`#a26e87` "AUTOMATED (Do not edit)" over columns A–L, black `#2c2c33` bar over 3 manual columns (content not decided yet),
-2 rows frozen. One row per order per tab (matched on tracking #): a follow-up alert updates the same row. The script never
+4 tabs = the alert types: Stuck, Delayed (+ 30-day reminder), Exception (+ Reason changed), Pickup point. Columns differ per
+tab (`LAYOUT` in the script; the script maps payload keys to columns): Reason only in Delayed + Exception, Previous Reason
+only in Exception (Reason cell orange when it's filled). Row 1 purple `#a26e87` "AUTOMATED (Do not edit)" over the auto
+columns, black `#2c2c33` bar over 3 manual columns (content not decided yet), 2 rows frozen. Current Status + Last Checkpoint
+follow every ParcelPanel update (v21: also right after a new alert, so a row in an older tab stays current). One row per order per tab (matched on tracking #): a follow-up alert updates the same row. The script never
 writes the black columns. `webhook` POSTs `{source:'shipping-monitor', tab, alert, ...}` after each Slack alert (also from the
 sweep), and `{type:'status', ...}` (Current Status + Last Checkpoint) in the background on later updates of orders that
 already had an alert. No secret: the long `/exec` link is the secret; the script ignores bodies without `source`.
