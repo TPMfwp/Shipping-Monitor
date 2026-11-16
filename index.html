@@ -1092,12 +1092,13 @@ function renderPerformance(){
 // ── Slack integration ────────────────────────────────────────────────────────
 
 let storesCache = {}; // store_name -> slack_webhook_url
+let sheetCache = {}; // store_name -> sheet_url (web-app van de Google Sheet van de winkel)
 
 async function loadStores(){
   if(!sb)return;
-  const{data}=await sb.from('stores').select('store_name,slack_webhook_url,alert_not_shipped_days,alert_delayed_days');
-  storesCache={};thrCache={};
-  (data||[]).forEach(r=>{ storesCache[r.store_name]=r.slack_webhook_url||''; thrCache[r.store_name]={ns:r.alert_not_shipped_days||5,dl:r.alert_delayed_days||15}; });
+  const{data}=await sb.from('stores').select('store_name,slack_webhook_url,sheet_url,alert_not_shipped_days,alert_delayed_days');
+  storesCache={};thrCache={};sheetCache={};
+  (data||[]).forEach(r=>{ storesCache[r.store_name]=r.slack_webhook_url||''; sheetCache[r.store_name]=r.sheet_url||''; thrCache[r.store_name]={ns:r.alert_not_shipped_days||5,dl:r.alert_delayed_days||15}; });
 }
 
 async function saveStoreWebhook(store_name, slack_webhook_url){
@@ -1151,6 +1152,12 @@ async function renderSlackSettings(){
         <button onclick="saveWebhook(${jsq(s)})" style="padding:7px 12px;border-radius:8px;border:none;background:#0071e3;color:white;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;">Save</button>
         <button onclick="testWebhook(${jsq(s)})" style="padding:7px 12px;border-radius:8px;border:1px solid #d2d2d7;background:white;color:#1d1d1f;font-size:12px;cursor:pointer;white-space:nowrap;">Test</button>
       </div>
+      <div style="font-size:11px;color:#86868b;margin:10px 0 4px;">Google Sheet link (sheet menu → 🔗 Link for monitor)</div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <input id="sh-${cssId(s)}" type="url" placeholder="https://script.google.com/macros/s/.../exec" value="${esc(sheetCache[s]||'')}"
+          style="flex:1;border:1px solid #d2d2d7;border-radius:8px;padding:7px 10px;font-size:11px;font-family:monospace;outline:none;color:#1d1d1f;">
+        <button onclick="saveSheetLink(${jsq(s)})" style="padding:7px 12px;border-radius:8px;border:none;background:#0071e3;color:white;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;">Save</button>
+      </div>
     </div>`).join('');
 }
 
@@ -1160,6 +1167,16 @@ async function saveWebhook(store){
   const url=document.getElementById('wh-'+cssId(store))?.value?.trim()||'';
   await saveStoreWebhook(store,url);
   showSlackMsg(url?'Opgeslagen.':'Webhook verwijderd.','#34c759');
+}
+
+async function saveSheetLink(store){
+  const url=document.getElementById('sh-'+cssId(store))?.value?.trim()||'';
+  if(url&&!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(url)){showSlackMsg('Dit is geen sheet-link (moet eindigen op /exec).','#ff3b30');return;}
+  if(!sb)return;
+  const{error}=await sb.from('stores').upsert({store_name:store,sheet_url:url||null},{onConflict:'store_name'});
+  if(error){showSlackMsg('Fout bij opslaan: '+error.message,'#ff3b30');return;}
+  sheetCache[store]=url;
+  showSlackMsg(url?'Sheet gekoppeld.':'Sheet-link verwijderd.','#34c759');
 }
 
 async function testWebhook(store){
