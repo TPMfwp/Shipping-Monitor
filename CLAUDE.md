@@ -125,7 +125,7 @@ edited in Manage stores → Alerts. A store without a `stores` row uses 5/15.
 ### Google Sheet per store (2026-11-16, webhook v19)
 Each store can have its own Google Sheet with a **bound** Apps Script (local clasp copy: `~/Projects/Shipping-Monitor Sheet (bound clasp)/`,
 clasp logged in as the sheet owner; after `clasp push` run `clasp deploy -i <deploymentId>` so the `/exec` link stays the same).
-5 tabs = the alert types: Stuck, Not moving (Last Scan column, script @7), Delayed (+ 30-day reminder), Exception (+ Reason changed), Pickup point. A missing tab is created automatically on the first alert; Setup puts the tabs in this order. Columns differ per
+5 tabs = the alert types: Info Received (was "Stuck", renamed 2026-11-17; script `RENAMED` renames an old Stuck tab automatically, webhook v24 sends 'Info Received'), Not moving (Last Scan column, script @7), Delayed (+ 30-day reminder), Exception (+ Reason changed), Pickup point. A missing tab is created automatically on the first alert; Setup puts the tabs in this order. Columns differ per
 tab (`LAYOUT` in the script; the script maps payload keys to columns): Reason only in Delayed + Exception, Previous Reason
 only in Exception (Reason cell orange when it's filled). Row 1 purple `#a26e87` "AUTOMATED (Do not edit)" over the auto
 columns, black `#2c2c33` bar over 3 manual columns (content not decided yet), 2 rows frozen. Current Status + Last Checkpoint
