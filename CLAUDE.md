@@ -282,3 +282,4 @@ Ideas for later (not started):
 ### Today-tab @25–@26 (2026-11-18)
 - "Go to row" = RichText-link (`#gid=..&range=A..`), geen HYPERLINK-formule (NL-locale geeft #ERROR!).
 - @26: één tabel met inklapbare rijgroepen per taak (Send 2nd mail / Send 3rd mail / Refund — day 8). Kopregel met aantal, daaronder rijen: Order #, Customer Name, Tab, Late, → Open. +/− staat links (BEFORE).
+- @27 (2026-11-18): Today-tab op verzoek van de merchant helemaal weggehaald (setup verwijdert de oude tab). Next Step-kolom blijft (refreshNext_). solvedOn_ was in @26 per ongeluk weg (brak ook de 7-dagen-Solved-regel), teruggezet.
