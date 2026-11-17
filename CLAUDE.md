@@ -278,3 +278,7 @@ Ideas for later (not started):
 - Separate idea: drop customer email from Slack alerts if the channel is shared with the supplier (privacy).
 - Tracking links: BUILT 2026-10-15 (see `shipments.tracking_link` / `webhook_samples`). Still open: verify the
   real ParcelPanel payload fields once a new store sends its first webhook.
+
+### Today-tab @25–@26 (2026-11-18)
+- "Go to row" = RichText-link (`#gid=..&range=A..`), geen HYPERLINK-formule (NL-locale geeft #ERROR!).
+- @26: één tabel met inklapbare rijgroepen per taak (Send 2nd mail / Send 3rd mail / Refund — day 8). Kopregel met aantal, daaronder rijen: Order #, Customer Name, Tab, Late, → Open. +/− staat links (BEFORE).
