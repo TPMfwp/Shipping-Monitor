@@ -292,3 +292,4 @@ Ideas for later (not started):
 - @35: kalender (requireDate-validatie) op Date: in RTC + Customer Order Issue.
 - @36: tab heet nu "Order Issues Customer" (RENAMED vangt beide oude namen).
 - @37–@38 (2026-11-18): Order Issues Customer krijgt 1e kolom Handled by: (dropdown, namen in DocumentProperties REPS, standaard Rep01–04, menu 👤 Edit reps hernoemt ook bestaande regels); kolom gaat mee naar Solved (na From Tab). addHandledBy_ voegt de kolom in bestaande tabs in (ook vanuit moveDone_). Tabvolgorde: Order Issues Customer eerst, dan auto-tabs, RTC, Solved.
+- @39: 👤 Edit reps = popup met 4 velden + Save (saveReps, publiek voor google.script.run).
