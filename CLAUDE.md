@@ -287,3 +287,4 @@ Ideas for later (not started):
 - @29: dropMails_ steviger (breakApart rij 1-2, alle tabs, aantal in Setup-melding). Merchant bevestigd: kolommen weg.
 - @30–@31 (2026-11-18): tabvolgorde RTC vóór Customer issues; kop Supplier Answer → "Supplier Update / Answer:" (key blijft supplier_answer).
 - @32: tab "Customer issues" heet nu "Customer Order Issue" (RENAMED hernoemt de oude tab bij Setup; menu-tekst ongewijzigd).
+- @33: Solved zonder blauwe FILLED IN BY CS-balk; Description/Evidence onder paars AUTOMATED. Solved houdt alle kolommen (merchant: niks verwijderen).
