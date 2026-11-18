@@ -290,3 +290,4 @@ Ideas for later (not started):
 - @33: Solved zonder blauwe FILLED IN BY CS-balk; Description/Evidence onder paars AUTOMATED. Solved houdt alle kolommen (merchant: niks verwijderen).
 - @34: SOLVED_DAYS 7 → 3 (merchant).
 - @35: kalender (requireDate-validatie) op Date: in RTC + Customer Order Issue.
+- @36: tab heet nu "Order Issues Customer" (RENAMED vangt beide oude namen).
