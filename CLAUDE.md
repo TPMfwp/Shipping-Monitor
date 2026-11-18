@@ -283,3 +283,4 @@ Ideas for later (not started):
 - "Go to row" = RichText-link (`#gid=..&range=A..`), geen HYPERLINK-formule (NL-locale geeft #ERROR!).
 - @26: één tabel met inklapbare rijgroepen per taak (Send 2nd mail / Send 3rd mail / Refund — day 8). Kopregel met aantal, daaronder rijen: Order #, Customer Name, Tab, Late, → Open. +/− staat links (BEFORE).
 - @27 (2026-11-18): Today-tab op verzoek van de merchant helemaal weggehaald (setup verwijdert de oude tab). Next Step-kolom blijft (refreshNext_). solvedOn_ was in @26 per ongeluk weg (brak ook de 7-dagen-Solved-regel), teruggezet.
+- @28 (2026-11-18): hele klantmail-functie (1st/2nd/3rd Mail, Next Step, CUSTOMER MAILS-balk) weer verwijderd op verzoek van de merchant. Code = stand van @23 + dropMails_() in Setup die de oude kolommen en Today-tab weghaalt.
