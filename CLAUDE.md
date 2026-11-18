@@ -286,3 +286,4 @@ Ideas for later (not started):
 - @28 (2026-11-18): hele klantmail-functie (1st/2nd/3rd Mail, Next Step, CUSTOMER MAILS-balk) weer verwijderd op verzoek van de merchant. Code = stand van @23 + dropMails_() in Setup die de oude kolommen en Today-tab weghaalt.
 - @29: dropMails_ steviger (breakApart rij 1-2, alle tabs, aantal in Setup-melding). Merchant bevestigd: kolommen weg.
 - @30–@31 (2026-11-18): tabvolgorde RTC vóór Customer issues; kop Supplier Answer → "Supplier Update / Answer:" (key blijft supplier_answer).
+- @32: tab "Customer issues" heet nu "Customer Order Issue" (RENAMED hernoemt de oude tab bij Setup; menu-tekst ongewijzigd).
