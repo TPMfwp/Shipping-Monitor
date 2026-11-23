@@ -45,6 +45,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
 .sec-dot.red{background:#ff3b30;animation:pulse 1.5s infinite;}
 .sec-dot.amber{background:#ff9500;}
 .sec-dot.green{background:#34c759;}
+.sec-dot.gray{background:#c7c7cc;}
 .sec-dot.teal{background:#34c759;}
 .sec-title{font-size:14px;font-weight:500;color:#1d1d1f;}
 .sec-sub{font-size:11px;color:#86868b;margin-top:1px;}
@@ -277,12 +278,26 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
           <span class="sec-dot red" id="dot3"></span>
           <div>
             <div class="sec-title">Exception</div>
-            <div class="sec-sub">Return to sender, failed delivery or lost — contact supplier</div>
+            <div class="sec-sub">Return to sender, address issue, damaged or lost — contact supplier</div>
           </div>
         </div>
         <div class="sec-count red" id="count3">—</div>
       </div>
       <div id="rows3"></div>
+    </div>
+
+    <div class="section">
+      <div class="sec-header">
+        <div class="sec-left">
+          <span class="sec-dot amber" id="dot6"></span>
+          <div>
+            <div class="sec-title">Failed attempt</div>
+            <div class="sec-sub">Delivery failed — email the customer</div>
+          </div>
+        </div>
+        <div class="sec-count amber" id="count6">—</div>
+      </div>
+      <div id="rows6"></div>
     </div>
 
     <div class="section">
@@ -493,7 +508,7 @@ function getSection(d){
   if(logged&&logged.section==='deleted')return null;
   const days=daysSince(d.fulfillment_date||d.order_date),t=thr(d.store_name);
   const s=d.status||'';
-  if(s==='EXCEPTION'||s==='EXPIRED'||s==='FAILED_ATTEMPT')return 3;
+  if(s==='EXCEPTION'||s==='EXPIRED')return 3;
   if((s==='PENDING'||s==='INFO_RECEIVED')&&days>=t.ns)return 1;
   if((s==='IN_TRANSIT'||s==='OUT_FOR_DELIVERY')&&days>=t.dl)return 2;
   return null;
@@ -509,7 +524,8 @@ function isNotMoving(d){
 function isPickup(d){
   return isOpen(d)&&(d.status==='READY_FOR_PICKUP'||d.status==='DELIVERED'&&d.substatus==='Delivered_004');
 }
-function needsAction(d){return getSection(d)!==null||isNotMoving(d)||isPickup(d);}
+function isFailed(d){return isOpen(d)&&d.status==='FAILED_ATTEMPT';}
+function needsAction(d){return getSection(d)!==null||isNotMoving(d)||isFailed(d)||isPickup(d);}
 function trackHtml(d){
   const t=d.tracking_number;
   if(!t||t==='Unknown')return '<span class="tgray">—</span>';
@@ -575,6 +591,7 @@ function renderSections(){
   const byScan=(f)=>(a,b)=>daysSince(b[f])-daysSince(a[f]);
   const s4=data.filter(isNotMoving).sort(byScan('last_checkpoint_time'));
   const s5=data.filter(isPickup).sort(byScan('status_since'));
+  const s6=data.filter(isFailed).sort(byScan('status_since'));
   // Log current action items
   s1.forEach(d=>logAction(d,'label_not_shipped'));
   s2.forEach(d=>logAction(d,'delayed'));
@@ -583,7 +600,7 @@ function renderSections(){
   actionLogCache.forEach(logged=>{
     if(logged.resolved_at)return;
     const current=all.find(x=>rowId(x)===logged.id);
-    if(current&&getSection(current)===null)resolveAction(current);
+    if(current&&getSection(current)===null&&!isFailed(current))resolveAction(current);
   });
   // Recently solved = resolved within 48h
   const solved=actionLogCache
@@ -594,7 +611,7 @@ function renderSections(){
   const renderRows=(arr,id,countId,dotId,dotCls,daysFrom=null)=>{
     document.getElementById(countId).textContent=arr.length;
     const dot=document.getElementById(dotId);
-    if(dot)dot.className='sec-dot '+(arr.length>0?dotCls:'green');
+    if(dot)dot.className='sec-dot '+(arr.length>0?dotCls:'gray');
     const el=document.getElementById(id);
     if(arr.length===0){
       el.innerHTML='<div class="allclear">All clear</div>';
@@ -626,6 +643,7 @@ function renderSections(){
   renderRows(s2,'rows2','count2','dot2','amber');
   renderRows(s3,'rows3','count3','dot3','red');
   renderRows(s4,'rows4','count4','dot4','amber','last_checkpoint_time');
+  renderRows(s6,'rows6','count6','dot6','amber','status_since');
   renderRows(s5,'rows5','count5','dot5','amber','status_since');
 
   document.getElementById('s-alert').textContent=data.filter(needsAction).length;   // een order in twee blokken telt één keer
@@ -1242,6 +1260,7 @@ function sheetExamples(store){
     row(3,'Delayed',`🐌 Delayed — in transit ${t.dl}+ days`,'Mary Johnson','YT2609100704258979',t.dl,'In transit','Arrived at facility'),
     row(4,'Exception','⚠️ Exception','Susan Williams','YT2609100704258980',8,'Exception','Address issue',{reason:'Address issue'}),
     row(5,'Exception','⚠️ Exception','Grace Hughes','YT2609100704258984',12,'Exception','Returned to sender',{reason:'Returned to sender'}),
+    row(7,'Failed attempt','🚪 Delivery attempt failed — email customer','Laura Fisher','YT2609100704258982',11,'Failed attempt','Recipient not available',{reason:'Recipient not available'}),
     row(6,'Pickup point','📍 Ready for pickup — email customer','Emma Clarke','YT2609100704258981',9,'Ready for pickup','Ready for pickup'),
     row(6,'Pickup point','📍 Not picked up after 72+ hours — email customer again','Emma Clarke','YT2609100704258981',9,'Ready for pickup','Ready for pickup'),
   ];
@@ -1259,7 +1278,7 @@ async function testWebhook(store){
   if(!url)out.push('Slack: geen link');
   else{
     showSlackMsg('Testberichten naar Slack...','#86868b',60000);
-    try{await testSlack(store,url);out.push('Slack: ✓ 7 berichten'+notSaved(url,storesCache[store]));}
+    try{await testSlack(store,url);out.push('Slack: ✓ 8 berichten'+notSaved(url,storesCache[store]));}
     catch(e){ok=false;out.push('Slack: ✗ '+e.message);}
   }
   if(!sheet)out.push('Sheet: geen link');
@@ -1285,6 +1304,9 @@ async function testSlack(store,url){
     const rb=buildBlocks('↩️ Shipment Returning to Sender [EXAMPLE]',store,'#TESTWEB5','Grace Hughes','grace.hughes@email.com','YT2609100704258984',today,'Please provide an update on this return. 🙏');
     rb[2].fields.push({type:'mrkdwn',text:'*Reason:*\nReturned to sender'},{type:'mrkdwn',text:'*Carrier:*\nDHL'});
     await sendSlack(url,rb,'↩️ Returning to Sender [EXAMPLE]');
+    const fb=buildBlocks('🚪 Delivery Attempt Failed [EXAMPLE]',store,'#TESTWEB7','Laura Fisher','','YT2609100704258982','','Please email the customer to arrange a new delivery. 🙏'),ff=fb[2].fields;
+    fb[2].fields=[ff[0],ff[1],ff[2],ff[5],{type:'mrkdwn',text:'*Reason:*\nRecipient not available'},{type:'mrkdwn',text:`*Failed on:*\n${today}`},{type:'mrkdwn',text:'*Carrier:*\nDHL'}];
+    await sendSlack(url,fb,'🚪 Delivery Attempt Failed [EXAMPLE]');
     // Zelfde velden als de echte pickup-meldingen uit de webhook-functie
     const pickup=(header,order,customer,tracking,since,ask)=>{const b=buildBlocks(header,store,order,customer,'',tracking,'',ask);const f=b[2].fields;b[2].fields=[f[0],f[1],f[2],f[5],{type:'mrkdwn',text:`*At pickup point since:*\n${since}`},{type:'mrkdwn',text:'*Carrier:*\nDHL'}];return b;};
     const ago3=new Date(Date.now()-3*86400000).toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'});

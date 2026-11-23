@@ -319,3 +319,12 @@ Ideas for later (not started):
 - 2026-11-23 sheet @57: Solved heeft nu ook Previous Alert en Resolution (alle kolommen behalve Issue Status); Status in Solved is ook voor RTC gewoon de pakketstatus en loopt mee.
 - 2026-11-23 sheet @58: RTC-kop Return Tracking heet nu gewoon Tracking #.
 - 2026-11-24: website-Test stuurt beide pickup-meldingen op #TESTWEB6 (7 meldingen, 6 regels), zodat Previous Alert te zien is.
+
+## Failed attempt (2026-11-24, sheet @59, webhook v32)
+- FAILED_ATTEMPT zit niet meer in Exception: eigen tab "Failed attempt", eigen Slack-melding (🚪) en eigen blok op het dashboard. `getSection` in webhook en index.html kennen hem niet meer; de melding zit in `extraAlerts` (key `failed_attempt`, `alerts.failed_at` / `failed_cp`).
+- Vervolgmelding alleen bij een mislukte scan ≥12 uur na de vorige (ParcelPanel heeft geen pogingenteller); in de sheet dezelfde regel, oude melding → Previous Alert.
+- Office closed / Weather delay (FailedAttempt_003/_004): "keep an eye on it" i.p.v. klant mailen.
+- action_log krijgt section 'exception', zodat de prestatiecijfers (perf-check) blijven kloppen.
+- Sheet: `fromFailed_` verhuist de regel naar Exception/Pickup point (gesprek mee); retour → RTC, Delivered → Solved.
+- Dashboard: lege blokken hebben een grijs bolletje. Testknop: 8 Slack-berichten, 8 meldingen op 7 regels.
+- Nog niet met een echt pakket gezien.
