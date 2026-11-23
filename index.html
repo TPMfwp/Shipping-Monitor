@@ -246,6 +246,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
     <div class="section">
       <div class="sec-header">
         <div class="sec-left">
+          <span class="sec-dot amber" id="dot4"></span>
+          <div>
+            <div class="sec-title">Not moving</div>
+            <div class="sec-sub">No tracking update for 5+ days while in transit — contact supplier</div>
+          </div>
+        </div>
+        <div class="sec-count amber" id="count4">—</div>
+      </div>
+      <div id="rows4"></div>
+    </div>
+
+    <div class="section">
+      <div class="sec-header">
+        <div class="sec-left">
           <span class="sec-dot amber" id="dot2"></span>
           <div>
             <div class="sec-title">Delayed in transit</div>
@@ -269,6 +283,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
         <div class="sec-count red" id="count3">—</div>
       </div>
       <div id="rows3"></div>
+    </div>
+
+    <div class="section">
+      <div class="sec-header">
+        <div class="sec-left">
+          <span class="sec-dot amber" id="dot5"></span>
+          <div>
+            <div class="sec-title">Pickup point</div>
+            <div class="sec-sub">Waiting at a pickup point — email the customer</div>
+          </div>
+        </div>
+        <div class="sec-count amber" id="count5">—</div>
+      </div>
+      <div id="rows5"></div>
     </div>
 
   <div class="dismissed-wrap" id="solved-section" style="display:none;">
@@ -470,6 +498,19 @@ function getSection(d){
   if((s==='IN_TRANSIT'||s==='OUT_FOR_DELIVERY')&&days>=t.dl)return 2;
   return null;
 }
+// Alleen tonen (Slack + sheet doet de webhook-functie): zelfde regels als NOT_MOVING_DAYS en de pickup-melding daar
+const NOT_MOVING_DAYS=5;
+function isOpen(d){
+  return isNew(d)&&hasTracking(d)&&!isDismissed(d)&&actionLogCache.find(x=>x.id===rowId(d))?.section!=='deleted';
+}
+function isNotMoving(d){
+  return isOpen(d)&&(d.status==='IN_TRANSIT'||d.status==='OUT_FOR_DELIVERY')&&!!d.last_checkpoint_time
+    &&daysSince(d.last_checkpoint_time)>=NOT_MOVING_DAYS&&!(d.alerts?.reasons||[]).includes('Exception_003');
+}
+function isPickup(d){
+  return isOpen(d)&&(d.status==='READY_FOR_PICKUP'||d.status==='DELIVERED'&&d.substatus==='Delivered_004');
+}
+function needsAction(d){return getSection(d)!==null||isNotMoving(d)||isPickup(d);}
 function trackHtml(d){
   const t=d.tracking_number;
   if(!t||t==='Unknown')return '<span class="tgray">—</span>';
@@ -532,6 +573,9 @@ function renderSections(){
   const s1=data.filter(d=>getSection(d)===1).sort((a,b)=>daysSince(b.fulfillment_date||b.order_date)-daysSince(a.fulfillment_date||a.order_date));
   const s2=data.filter(d=>getSection(d)===2).sort((a,b)=>daysSince(b.fulfillment_date||b.order_date)-daysSince(a.fulfillment_date||a.order_date));
   const s3=data.filter(d=>getSection(d)===3).sort((a,b)=>daysSince(b.fulfillment_date||b.order_date)-daysSince(a.fulfillment_date||a.order_date));
+  const byScan=(f)=>(a,b)=>daysSince(b[f])-daysSince(a[f]);
+  const s4=data.filter(isNotMoving).sort(byScan('last_checkpoint_time'));
+  const s5=data.filter(isPickup).sort(byScan('status_since'));
   // Log current action items
   s1.forEach(d=>logAction(d,'label_not_shipped'));
   s2.forEach(d=>logAction(d,'delayed'));
@@ -548,7 +592,7 @@ function renderSections(){
     .map(x=>({...x,...(all.find(d=>rowId(d)===x.id)||{})}))
     .sort((a,b)=>new Date(b.resolved_at)-new Date(a.resolved_at));
 
-  const renderRows=(arr,id,countId,dotId,dotCls,showDismiss=true)=>{
+  const renderRows=(arr,id,countId,dotId,dotCls,daysFrom=null)=>{
     document.getElementById(countId).textContent=arr.length;
     const dot=document.getElementById(dotId);
     if(dot)dot.className='sec-dot '+(arr.length>0?dotCls:'green');
@@ -557,10 +601,10 @@ function renderSections(){
       el.innerHTML='<div class="allclear">All clear</div>';
     }else{
       el.innerHTML='<div class="sec-rows">'+arr.map(d=>{
-        const days=daysSince(d.fulfillment_date||d.order_date),t=thr(d.store_name);
-        const dc=days>=t.dl?'dc-red':days>=t.ns?'dc-amber':'dc-ok';
-        const xbtn=showDismiss?`<button class="xbtn dismiss-trigger" data-id="${esc(rowId(d))}">×</button>`:'<div></div>';
-        return `<div class="srow${showDismiss?'':' solved'}">
+        const days=daysSince(daysFrom?d[daysFrom]:d.fulfillment_date||d.order_date),t=thr(d.store_name);
+        const dc=daysFrom?'dc-amber':days>=t.dl?'dc-red':days>=t.ns?'dc-amber':'dc-ok';
+        const xbtn=`<button class="xbtn dismiss-trigger" data-id="${esc(rowId(d))}">×</button>`;
+        return `<div class="srow">
           <div class="onum">${esc(d.order_number||'—')}</div>
           <div class="cname">${esc(d.customer_name||'—')}</div>
           <div>${trackHtml(d)}</div>
@@ -581,8 +625,10 @@ function renderSections(){
   renderRows(s1,'rows1','count1','dot1','red');
   renderRows(s2,'rows2','count2','dot2','amber');
   renderRows(s3,'rows3','count3','dot3','red');
+  renderRows(s4,'rows4','count4','dot4','amber','last_checkpoint_time');
+  renderRows(s5,'rows5','count5','dot5','amber','status_since');
 
-  document.getElementById('s-alert').textContent=s1.length+s2.length+s3.length;
+  document.getElementById('s-alert').textContent=data.filter(needsAction).length;   // een order in twee blokken telt één keer
 
   const solvedSection=document.getElementById('solved-section');
   if(solved.length>0){
@@ -694,7 +740,7 @@ function sortBy(col){
 
 function renderTable(){
   let data=storeFiltered();
-  if(curTableFilter==='alert') data=data.filter(d=>getSection(d)!==null);
+  if(curTableFilter==='alert') data=data.filter(needsAction);
   else if(curTableFilter==='transit') data=data.filter(d=>d.status==='IN_TRANSIT'||d.status==='OUT_FOR_DELIVERY');
   else if(curTableFilter==='delivered') data=data.filter(d=>d.status==='DELIVERED');
   filtered=data;
