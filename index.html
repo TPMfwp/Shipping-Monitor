@@ -1162,7 +1162,8 @@ async function sendSlack(webhook_url, blocks, fallback_text){
   // slack-notify accepteert alleen ingelogde gebruikers (of de server-token), dus sessie-token meesturen
   const{data:{session}}=await sb.auth.getSession();
   const res=await fetch(SLACK_FUNCTION_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(session?.access_token||'')},body:JSON.stringify({webhook_url,blocks,text:fallback_text||' '})});
-  if(!res.ok)throw new Error('slack-notify returned '+res.status);
+  const out=await res.json().catch(()=>null);
+  if(!res.ok||!out?.ok)throw new Error('Slack weigert het bericht ('+(out?.status||res.status)+')');
 }
 
 function buildBlocks(header, store, order_number, customer_name, customer_email, tracking, order_date, body_text){
@@ -1228,41 +1229,74 @@ async function saveSheetLink(store){
   showSlackMsg(url?'Sheet gekoppeld.':'Sheet-link verwijderd.','#34c759');
 }
 
+// Voorbeelden voor de sheet: zelfde orders als de Slack-voorbeelden, via dezelfde weg als echte meldingen (doPost).
+// #TEST-nummers, zodat Delete test rows / Setup in de sheet ze weghaalt.
+function sheetExamples(store){
+  const t=thr(store),ago=n=>new Date(Date.now()-n*86400000).toISOString(),slug=store.toLowerCase().replace(/[^a-z0-9]/g,'');
+  const row=(n,tab,alert,customer,tracking,age,status,checkpoint,extra={})=>({source:'shipping-monitor',tab,alert,alert_date:ago(0),order:'#TESTWEB'+n,order_date:ago(age+1),ship_date:ago(age),
+    customer,email:customer.toLowerCase().replace(' ','.')+'@example.com',tracking,tracking_link:'https://t.17track.net/en#nums='+tracking,carrier:'DHL',product:'x1 Example product ('+slug+')',reason:'',prev_reason:'',checkpoint,status,...extra});
+  return [
+    row(1,'Info Received',`⏳ Info Received — not shipped ${t.ns}+ days`,'Jane Smith','YT2609100704258978',t.ns,'Info received','Shipping information received'),
+    row(2,'Not moving',`⏸️ Not moving — no scan ${t.nm}+ days`,'Olivia Turner','YT2609100704258983',t.nm+3,'In transit','Departed from facility',{last_scan:ago(t.nm)}),
+    row(3,'Delayed',`🐌 Delayed — in transit ${t.dl}+ days`,'Mary Johnson','YT2609100704258979',t.dl,'In transit','Arrived at facility'),
+    row(4,'Exception','⚠️ Exception','Susan Williams','YT2609100704258980',8,'Exception','Address issue',{reason:'Address issue'}),
+    row(5,'Exception','⚠️ Exception','Grace Hughes','YT2609100704258984',12,'Exception','Returned to sender',{reason:'Returned to sender'}),
+    row(6,'Pickup point','📍 Ready for pickup — email customer','Emma Clarke','YT2609100704258981',9,'Ready for pickup','Ready for pickup'),
+    row(7,'Pickup point','📍 Not picked up after 48+ hours — email customer again','Laura Fisher','YT2609100704258982',11,'Ready for pickup','Ready for pickup'),
+  ];
+}
+// text/plain: anders blokkeert de browser het verzoek naar Google. Pas goed als het sheet-script zelf ok antwoordt.
+async function sendSheet(url,body){
+  const res=await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
+  if(!/"ok":\s*true/.test(await res.text()))throw new Error('geen goed antwoord van de sheet');
+}
 async function testWebhook(store){
-  const url=document.getElementById('wh-'+cssId(store))?.value?.trim()||'';
-  if(!url){showSlackMsg('Geen webhook URL ingevuld.','#ff3b30');return;}
-  showSlackMsg('Bezig met versturen...','#86868b');
-  try{
+  const val=k=>document.getElementById(k+'-'+cssId(store))?.value?.trim()||'';
+  const url=val('wh'),sheet=val('sh'),out=[];let ok=true;
+  const notSaved=(now,saved)=>now!==(saved||'')?' (let op: link nog niet opgeslagen)':'';
+  if(!url&&!sheet){showSlackMsg('Geen Slack- of sheet-link ingevuld.','#ff3b30');return;}
+  if(!url)out.push('Slack: geen link');
+  else{
+    showSlackMsg('Testberichten naar Slack...','#86868b',60000);
+    try{await testSlack(store,url);out.push('Slack: ✓ 7 berichten'+notSaved(url,storesCache[store]));}
+    catch(e){ok=false;out.push('Slack: ✗ '+e.message);}
+  }
+  if(!sheet)out.push('Sheet: geen link');
+  else if(!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(sheet)){ok=false;out.push('Sheet: ✗ link moet eindigen op /exec');}
+  else{
+    const rows=sheetExamples(store);
+    try{
+      for(let i=0;i<rows.length;i++){showSlackMsg(`Testregels naar de sheet (${i+1}/${rows.length})...`,'#86868b',60000);await sendSheet(sheet,rows[i]);}
+      out.push(`Sheet: ✓ ${rows.length} regels`+notSaved(sheet,sheetCache[store]));
+    }catch(e){ok=false;out.push('Sheet: ✗ '+e.message);}
+  }
+  showSlackMsg(out.join(' · '),!ok?'#ff3b30':'#34c759',60000);
+}
+async function testSlack(store,url){
     const today=new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'}).replace(/\//g,'/');
-    showSlackMsg('Test berichten versturen...','#86868b');
     const t=thr(store);
-    await sendSlack(url,buildBlocks('⏳ Shipment Stuck — Label Created, Not Shipped [EXAMPLE]',store,'#ER971234','Jane Smith','jane.smith@email.com','YT2609100704258978',today,`This shipment has been on "Info Received" status for ${t.ns}+ days. Why has this order not been shipped yet? Please provide an update. 🙏`),'⏳ Label Not Shipped [EXAMPLE]');
-    const nmb=buildBlocks(`⏸️ Shipment Not Moving — No Tracking Update ${t.nm}+ Days [EXAMPLE]`,store,'#ER971239','Olivia Turner','','YT2609100704258983','',`This shipment has had no tracking update for ${t.nm}+ days. Please provide an update. 🙏`),nmf=nmb[2].fields;
+    await sendSlack(url,buildBlocks('⏳ Shipment Stuck — Label Created, Not Shipped [EXAMPLE]',store,'#TESTWEB1','Jane Smith','jane.smith@email.com','YT2609100704258978',today,`This shipment has been on "Info Received" status for ${t.ns}+ days. Why has this order not been shipped yet? Please provide an update. 🙏`),'⏳ Label Not Shipped [EXAMPLE]');
+    const nmb=buildBlocks(`⏸️ Shipment Not Moving — No Tracking Update ${t.nm}+ Days [EXAMPLE]`,store,'#TESTWEB2','Olivia Turner','','YT2609100704258983','',`This shipment has had no tracking update for ${t.nm}+ days. Please provide an update. 🙏`),nmf=nmb[2].fields;
     nmb[2].fields=[nmf[0],nmf[1],nmf[2],nmf[5],{type:'mrkdwn',text:`*Last scan:*\n${new Date(Date.now()-t.nm*86400000).toLocaleDateString('en-GB')}\nDeparted from facility`},{type:'mrkdwn',text:'*Carrier:*\nDHL'}];
     await sendSlack(url,nmb,'⏸️ Not Moving [EXAMPLE]');
-    await sendSlack(url,buildBlocks(`🐌 Shipment Delayed — In Transit ${t.dl}+ Days [EXAMPLE]`,store,'#ER971235','Mary Johnson','mary.johnson@email.com','YT2609100704258979',today,`This shipment has been in transit for ${t.dl}+ days without delivery. Why has this order not been delivered yet? Please provide an update. 🙏`),'🐌 Delayed In Transit [EXAMPLE]');
-    await sendSlack(url,buildBlocks('⚠️ Shipment Exception — Action Required [EXAMPLE]',store,'#ER971236','Susan Williams','susan.williams@email.com','YT2609100704258980',today,'This shipment has an exception status. Please investigate and provide an update. 🙏'),'⚠️ Exception [EXAMPLE]');
-    const rb=buildBlocks('↩️ Shipment Returning to Sender [EXAMPLE]',store,'#ER971240','Grace Hughes','grace.hughes@email.com','YT2609100704258984',today,'Please provide an update on this return. 🙏');
+    await sendSlack(url,buildBlocks(`🐌 Shipment Delayed — In Transit ${t.dl}+ Days [EXAMPLE]`,store,'#TESTWEB3','Mary Johnson','mary.johnson@email.com','YT2609100704258979',today,`This shipment has been in transit for ${t.dl}+ days without delivery. Why has this order not been delivered yet? Please provide an update. 🙏`),'🐌 Delayed In Transit [EXAMPLE]');
+    await sendSlack(url,buildBlocks('⚠️ Shipment Exception — Action Required [EXAMPLE]',store,'#TESTWEB4','Susan Williams','susan.williams@email.com','YT2609100704258980',today,'This shipment has an exception status. Please investigate and provide an update. 🙏'),'⚠️ Exception [EXAMPLE]');
+    const rb=buildBlocks('↩️ Shipment Returning to Sender [EXAMPLE]',store,'#TESTWEB5','Grace Hughes','grace.hughes@email.com','YT2609100704258984',today,'Please provide an update on this return. 🙏');
     rb[2].fields.push({type:'mrkdwn',text:'*Reason:*\nReturned to sender'},{type:'mrkdwn',text:'*Carrier:*\nDHL'});
     await sendSlack(url,rb,'↩️ Returning to Sender [EXAMPLE]');
     // Zelfde velden als de echte pickup-meldingen uit de webhook-functie
     const pickup=(header,order,customer,tracking,since,ask)=>{const b=buildBlocks(header,store,order,customer,'',tracking,'',ask);const f=b[2].fields;b[2].fields=[f[0],f[1],f[2],f[5],{type:'mrkdwn',text:`*At pickup point since:*\n${since}`},{type:'mrkdwn',text:'*Carrier:*\nDHL'}];return b;};
     const ago2=new Date(Date.now()-2*86400000).toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'});
-    await sendSlack(url,pickup('📍 Shipment Ready for Pickup [EXAMPLE]','#ER971237','Emma Clarke','YT2609100704258981',today,'Please email the customer to pick up this parcel as soon as possible. 🙏'),'📍 Ready for Pickup [EXAMPLE]');
-    await sendSlack(url,pickup('📍 Shipment Still Not Picked Up — 48+ Hours [EXAMPLE]','#ER971238','Laura Fisher','YT2609100704258982',ago2,'This parcel has not been picked up yet. Please email the customer again. 🙏'),'📍 Still Not Picked Up [EXAMPLE]');
-    showSlackMsg('Test meldingen verstuurd.','#34c759');
-    showSlackMsg('Test melding verstuurd.','#34c759');
-  }catch(e){
-    showSlackMsg('Fout bij versturen: '+e.message,'#ff3b30');
-  }
+    await sendSlack(url,pickup('📍 Shipment Ready for Pickup [EXAMPLE]','#TESTWEB6','Emma Clarke','YT2609100704258981',today,'Please email the customer to pick up this parcel as soon as possible. 🙏'),'📍 Ready for Pickup [EXAMPLE]');
+    await sendSlack(url,pickup('📍 Shipment Still Not Picked Up — 48+ Hours [EXAMPLE]','#TESTWEB7','Laura Fisher','YT2609100704258982',ago2,'This parcel has not been picked up yet. Please email the customer again. 🙏'),'📍 Still Not Picked Up [EXAMPLE]');
 }
 
-function showSlackMsg(msg,color){
+function showSlackMsg(msg,color,ms=4000){
   const el=document.getElementById('slack-msg');
   if(!el)return;
   el.textContent=msg;
   el.style.color=color;
-  setTimeout(()=>{if(el.textContent===msg)el.textContent='';},4000);
+  setTimeout(()=>{if(el.textContent===msg)el.textContent='';},ms);
 }
 </script>
 </body>
