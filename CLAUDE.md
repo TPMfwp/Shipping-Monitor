@@ -318,3 +318,4 @@ Ideas for later (not started):
 - 2026-11-23 sheet @56 + webhook v31: pickup-herinnering na 72 uur (was 48; testberichten op de site ook). Pickup point Alert/Previous Alert 400 breed. RTC en Solved: kolom New Tracking (supplier vult in); oude pakket-tracking blijft de sleutel.
 - 2026-11-23 sheet @57: Solved heeft nu ook Previous Alert en Resolution (alle kolommen behalve Issue Status); Status in Solved is ook voor RTC gewoon de pakketstatus en loopt mee.
 - 2026-11-23 sheet @58: RTC-kop Return Tracking heet nu gewoon Tracking #.
+- 2026-11-24: website-Test stuurt beide pickup-meldingen op #TESTWEB6 (7 meldingen, 6 regels), zodat Previous Alert te zien is.

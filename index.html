@@ -1230,6 +1230,7 @@ async function saveSheetLink(store){
 }
 
 // Voorbeelden voor de sheet: zelfde orders als de Slack-voorbeelden, via dezelfde weg als echte meldingen (doPost).
+// De twee pickup-meldingen gaan over dezelfde order: één regel, de eerste melding schuift naar Previous Alert.
 // #TEST-nummers, zodat Delete test rows / Setup in de sheet ze weghaalt.
 function sheetExamples(store){
   const t=thr(store),ago=n=>new Date(Date.now()-n*86400000).toISOString(),slug=store.toLowerCase().replace(/[^a-z0-9]/g,'');
@@ -1242,7 +1243,7 @@ function sheetExamples(store){
     row(4,'Exception','⚠️ Exception','Susan Williams','YT2609100704258980',8,'Exception','Address issue',{reason:'Address issue'}),
     row(5,'Exception','⚠️ Exception','Grace Hughes','YT2609100704258984',12,'Exception','Returned to sender',{reason:'Returned to sender'}),
     row(6,'Pickup point','📍 Ready for pickup — email customer','Emma Clarke','YT2609100704258981',9,'Ready for pickup','Ready for pickup'),
-    row(7,'Pickup point','📍 Not picked up after 72+ hours — email customer again','Laura Fisher','YT2609100704258982',11,'Ready for pickup','Ready for pickup'),
+    row(6,'Pickup point','📍 Not picked up after 72+ hours — email customer again','Emma Clarke','YT2609100704258981',9,'Ready for pickup','Ready for pickup'),
   ];
 }
 // text/plain: anders blokkeert de browser het verzoek naar Google. Pas goed als het sheet-script zelf ok antwoordt.
@@ -1267,7 +1268,7 @@ async function testWebhook(store){
     const rows=sheetExamples(store);
     try{
       for(let i=0;i<rows.length;i++){showSlackMsg(`Testregels naar de sheet (${i+1}/${rows.length})...`,'#86868b',60000);await sendSheet(sheet,rows[i]);}
-      out.push(`Sheet: ✓ ${rows.length} regels`+notSaved(sheet,sheetCache[store]));
+      out.push(`Sheet: ✓ ${rows.length} meldingen op ${new Set(rows.map(r=>r.order)).size} regels`+notSaved(sheet,sheetCache[store]));
     }catch(e){ok=false;out.push('Sheet: ✗ '+e.message);}
   }
   showSlackMsg(out.join(' · '),!ok?'#ff3b30':'#34c759',60000);
@@ -1288,7 +1289,7 @@ async function testSlack(store,url){
     const pickup=(header,order,customer,tracking,since,ask)=>{const b=buildBlocks(header,store,order,customer,'',tracking,'',ask);const f=b[2].fields;b[2].fields=[f[0],f[1],f[2],f[5],{type:'mrkdwn',text:`*At pickup point since:*\n${since}`},{type:'mrkdwn',text:'*Carrier:*\nDHL'}];return b;};
     const ago3=new Date(Date.now()-3*86400000).toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'});
     await sendSlack(url,pickup('📍 Shipment Ready for Pickup [EXAMPLE]','#TESTWEB6','Emma Clarke','YT2609100704258981',today,'Please email the customer to pick up this parcel as soon as possible. 🙏'),'📍 Ready for Pickup [EXAMPLE]');
-    await sendSlack(url,pickup('📍 Shipment Still Not Picked Up — 72+ Hours [EXAMPLE]','#TESTWEB7','Laura Fisher','YT2609100704258982',ago3,'This parcel has not been picked up yet. Please email the customer again. 🙏'),'📍 Still Not Picked Up [EXAMPLE]');
+    await sendSlack(url,pickup('📍 Shipment Still Not Picked Up — 72+ Hours [EXAMPLE]','#TESTWEB6','Emma Clarke','YT2609100704258981',ago3,'This parcel has not been picked up yet. Please email the customer again. 🙏'),'📍 Still Not Picked Up [EXAMPLE]');
 }
 
 function showSlackMsg(msg,color,ms=4000){
