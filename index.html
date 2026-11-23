@@ -249,7 +249,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
           <span class="sec-dot amber" id="dot4"></span>
           <div>
             <div class="sec-title">Not moving</div>
-            <div class="sec-sub">No tracking update for 5+ days while in transit — contact supplier</div>
+            <div class="sec-sub" id="sub4">No tracking update for 5+ days while in transit — contact supplier</div>
           </div>
         </div>
         <div class="sec-count amber" id="count4">—</div>
@@ -481,9 +481,9 @@ function timeAgo(d){
 function isNew(d){return new Date(d.order_date||d.fulfillment_date||0)>=CUTOFF;}
 function hasTracking(d){const t=d.tracking_number||'';return t&&t!=='Unknown'&&t!=='';}
 
-// Per-store actiegrenzen (stores.alert_not_shipped_days / alert_delayed_days); zelfde logica als de webhook-functie
+// Per-store actiegrenzen (stores.alert_not_shipped_days / alert_delayed_days / alert_not_moving_days); zelfde logica als de webhook-functie
 let thrCache={};
-function thr(store){return thrCache[store]||{ns:5,dl:15};}
+function thr(store){return thrCache[store]||{ns:5,dl:15,nm:5};}
 function getSection(d){
   if(d.status==='CANCELLED'||d.status==='RESOLVED')return null;
   if(!isNew(d)||!hasTracking(d))return null;
@@ -498,14 +498,13 @@ function getSection(d){
   if((s==='IN_TRANSIT'||s==='OUT_FOR_DELIVERY')&&days>=t.dl)return 2;
   return null;
 }
-// Alleen tonen (Slack + sheet doet de webhook-functie): zelfde regels als NOT_MOVING_DAYS en de pickup-melding daar
-const NOT_MOVING_DAYS=5;
+// Alleen tonen (Slack + sheet doet de webhook-functie): zelfde regels als daar
 function isOpen(d){
   return isNew(d)&&hasTracking(d)&&!isDismissed(d)&&actionLogCache.find(x=>x.id===rowId(d))?.section!=='deleted';
 }
 function isNotMoving(d){
   return isOpen(d)&&(d.status==='IN_TRANSIT'||d.status==='OUT_FOR_DELIVERY')&&!!d.last_checkpoint_time
-    &&daysSince(d.last_checkpoint_time)>=NOT_MOVING_DAYS&&!(d.alerts?.reasons||[]).includes('Exception_003');
+    &&daysSince(d.last_checkpoint_time)>=thr(d.store_name).nm&&!(d.alerts?.reasons||[]).includes('Exception_003');
 }
 function isPickup(d){
   return isOpen(d)&&(d.status==='READY_FOR_PICKUP'||d.status==='DELIVERED'&&d.substatus==='Delivered_004');
@@ -620,6 +619,7 @@ function renderSections(){
   const sts=curStore==='all'?[...new Set(all.map(d=>d.store_name).filter(Boolean))]:[curStore];
   const lbl=k=>{const v=[...new Set(sts.map(x=>thr(x)[k]))];return v.length===1?v[0]+'+ days':"each store's set number of days";};
   document.getElementById('sub1').textContent=`Tracking exists but no carrier scan after ${lbl('ns')} — contact supplier`;
+  document.getElementById('sub4').textContent=`No tracking update for ${lbl('nm')} while in transit — contact supplier`;
   document.getElementById('sub2').textContent=`In transit for ${lbl('dl')} without delivery — contact supplier`;
 
   renderRows(s1,'rows1','count1','dot1','red');
@@ -838,6 +838,7 @@ async function renderAlertSettings(){
       <div style="font-size:12px;font-weight:600;color:#1d1d1f;margin-bottom:8px;">${esc(s)}</div>
       <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:12px;color:#1d1d1f;">
         <label style="display:flex;gap:6px;align-items:center;">Not shipped after <input id="ns-${cssId(s)}" type="number" min="1" max="120" value="${t.ns}" style="${inp}"> days</label>
+        <label style="display:flex;gap:6px;align-items:center;">Not moving after <input id="nm-${cssId(s)}" type="number" min="1" max="120" value="${t.nm}" style="${inp}"> days</label>
         <label style="display:flex;gap:6px;align-items:center;">Delayed after <input id="dl-${cssId(s)}" type="number" min="1" max="120" value="${t.dl}" style="${inp}"> days</label>
         <button onclick="saveAlertDays(${jsq(s)})" style="margin-left:auto;padding:7px 12px;border-radius:8px;border:none;background:#0071e3;color:white;font-size:12px;font-weight:500;cursor:pointer;">Save</button>
       </div>
@@ -845,12 +846,12 @@ async function renderAlertSettings(){
 }
 
 async function saveAlertDays(store){
-  const ns=parseInt(document.getElementById('ns-'+cssId(store))?.value),dl=parseInt(document.getElementById('dl-'+cssId(store))?.value);
+  const ns=parseInt(document.getElementById('ns-'+cssId(store))?.value),dl=parseInt(document.getElementById('dl-'+cssId(store))?.value),nm=parseInt(document.getElementById('nm-'+cssId(store))?.value);
   const msg=(m,c)=>{const el=document.getElementById('alerts-msg');el.textContent=m;el.style.color=c;setTimeout(()=>{if(el.textContent===m)el.textContent='';},4000);};
-  if(!(ns>=1&&ns<=120&&dl>=1&&dl<=120)){msg('Use whole numbers between 1 and 120.','#ff3b30');return;}
-  const{error}=await sb.from('stores').upsert({store_name:store,alert_not_shipped_days:ns,alert_delayed_days:dl},{onConflict:'store_name'});
+  if(!(ns>=1&&ns<=120&&dl>=1&&dl<=120&&nm>=1&&nm<=120)){msg('Use whole numbers between 1 and 120.','#ff3b30');return;}
+  const{error}=await sb.from('stores').upsert({store_name:store,alert_not_shipped_days:ns,alert_delayed_days:dl,alert_not_moving_days:nm},{onConflict:'store_name'});
   if(error){msg('Save failed: '+error.message,'#ff3b30');return;}
-  thrCache[store]={ns,dl};
+  thrCache[store]={ns,dl,nm};
   msg(`Saved for ${store}.`,'#34c759');
   renderSections();renderTable();
 }
@@ -1142,9 +1143,9 @@ let sheetCache = {}; // store_name -> sheet_url (web-app van de Google Sheet van
 
 async function loadStores(){
   if(!sb)return;
-  const{data}=await sb.from('stores').select('store_name,slack_webhook_url,sheet_url,alert_not_shipped_days,alert_delayed_days');
+  const{data}=await sb.from('stores').select('store_name,slack_webhook_url,sheet_url,alert_not_shipped_days,alert_delayed_days,alert_not_moving_days');
   storesCache={};thrCache={};sheetCache={};
-  (data||[]).forEach(r=>{ storesCache[r.store_name]=r.slack_webhook_url||''; sheetCache[r.store_name]=r.sheet_url||''; thrCache[r.store_name]={ns:r.alert_not_shipped_days||5,dl:r.alert_delayed_days||15}; });
+  (data||[]).forEach(r=>{ storesCache[r.store_name]=r.slack_webhook_url||''; sheetCache[r.store_name]=r.sheet_url||''; thrCache[r.store_name]={ns:r.alert_not_shipped_days||5,dl:r.alert_delayed_days||15,nm:r.alert_not_moving_days||5}; });
 }
 
 async function saveStoreWebhook(store_name, slack_webhook_url){
@@ -1234,6 +1235,9 @@ async function testWebhook(store){
     showSlackMsg('Test berichten versturen...','#86868b');
     const t=thr(store);
     await sendSlack(url,buildBlocks('⏳ Shipment Stuck — Label Created, Not Shipped [EXAMPLE]',store,'#ER971234','Jane Smith','jane.smith@email.com','YT2609100704258978',today,`This shipment has been on "Info Received" status for ${t.ns}+ days. Why has this order not been shipped yet? Please provide an update. 🙏`),'⏳ Label Not Shipped [EXAMPLE]');
+    const nmb=buildBlocks(`⏸️ Shipment Not Moving — No Tracking Update ${t.nm}+ Days [EXAMPLE]`,store,'#ER971239','Olivia Turner','','YT2609100704258983','',`This shipment has had no tracking update for ${t.nm}+ days. Please provide an update. 🙏`),nmf=nmb[2].fields;
+    nmb[2].fields=[nmf[0],nmf[1],nmf[2],nmf[5],{type:'mrkdwn',text:`*Last scan:*\n${new Date(Date.now()-t.nm*86400000).toLocaleDateString('en-GB')}\nDeparted from facility`},{type:'mrkdwn',text:'*Carrier:*\nDHL'}];
+    await sendSlack(url,nmb,'⏸️ Not Moving [EXAMPLE]');
     await sendSlack(url,buildBlocks(`🐌 Shipment Delayed — In Transit ${t.dl}+ Days [EXAMPLE]`,store,'#ER971235','Mary Johnson','mary.johnson@email.com','YT2609100704258979',today,`This shipment has been in transit for ${t.dl}+ days without delivery. Why has this order not been delivered yet? Please provide an update. 🙏`),'🐌 Delayed In Transit [EXAMPLE]');
     await sendSlack(url,buildBlocks('⚠️ Shipment Exception — Action Required [EXAMPLE]',store,'#ER971236','Susan Williams','susan.williams@email.com','YT2609100704258980',today,'This shipment has an exception status. Please investigate and provide an update. 🙏'),'⚠️ Exception [EXAMPLE]');
     // Zelfde velden als de echte pickup-meldingen uit de webhook-functie
