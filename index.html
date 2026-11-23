@@ -1190,6 +1190,11 @@ async function testWebhook(store){
     await sendSlack(url,buildBlocks('⏳ Shipment Stuck — Label Created, Not Shipped [EXAMPLE]',store,'#ER971234','Jane Smith','jane.smith@email.com','YT2609100704258978',today,`This shipment has been on "Info Received" status for ${t.ns}+ days. Why has this order not been shipped yet? Please provide an update. 🙏`),'⏳ Label Not Shipped [EXAMPLE]');
     await sendSlack(url,buildBlocks(`🐌 Shipment Delayed — In Transit ${t.dl}+ Days [EXAMPLE]`,store,'#ER971235','Mary Johnson','mary.johnson@email.com','YT2609100704258979',today,`This shipment has been in transit for ${t.dl}+ days without delivery. Why has this order not been delivered yet? Please provide an update. 🙏`),'🐌 Delayed In Transit [EXAMPLE]');
     await sendSlack(url,buildBlocks('⚠️ Shipment Exception — Action Required [EXAMPLE]',store,'#ER971236','Susan Williams','susan.williams@email.com','YT2609100704258980',today,'This shipment has an exception status. Please investigate and provide an update. 🙏'),'⚠️ Exception [EXAMPLE]');
+    // Zelfde velden als de echte pickup-meldingen uit de webhook-functie
+    const pickup=(header,order,customer,tracking,since,ask)=>{const b=buildBlocks(header,store,order,customer,'',tracking,'',ask);const f=b[2].fields;b[2].fields=[f[0],f[1],f[2],f[5],{type:'mrkdwn',text:`*At pickup point since:*\n${since}`},{type:'mrkdwn',text:'*Carrier:*\nDHL'}];return b;};
+    const ago2=new Date(Date.now()-2*86400000).toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'});
+    await sendSlack(url,pickup('📍 Shipment Ready for Pickup [EXAMPLE]','#ER971237','Emma Clarke','YT2609100704258981',today,'Please email the customer to pick up this parcel as soon as possible. 🙏'),'📍 Ready for Pickup [EXAMPLE]');
+    await sendSlack(url,pickup('📍 Shipment Still Not Picked Up — 48+ Hours [EXAMPLE]','#ER971238','Laura Fisher','YT2609100704258982',ago2,'This parcel has not been picked up yet. Please email the customer again. 🙏'),'📍 Still Not Picked Up [EXAMPLE]');
     showSlackMsg('Test meldingen verstuurd.','#34c759');
     showSlackMsg('Test melding verstuurd.','#34c759');
   }catch(e){
