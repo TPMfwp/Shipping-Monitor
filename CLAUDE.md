@@ -314,3 +314,4 @@ Ideas for later (not started):
 - **Website-Test vult nu ook de sheet (2026-11-23):** tab Slack → Test stuurt 7 [EXAMPLE]-berichten naar Slack én 7 regels (#TESTWEB1–7) rechtstreeks vanuit de browser naar de ingevulde sheet-link (text/plain i.v.m. CORS), met resultaat per kant en waarschuwing als de link nog niet is opgeslagen. Weghalen: Delete test rows of Setup. Test niet de route via de webhook-functie. `sendSlack` controleert nu `ok` van slack-notify.
 
 - 2026-11-23 sheet @54: Previous Alert (Pickup point); RTC met Customer Email, Last Checkpoint en Current Status (automatisch), Return Status in de zwarte balk. RTC-regel blijft bij Delivered staan tot Issue Status Solved.
+- 2026-11-23 sheet @55: RTC Return Status vervangen door Resolution (Refunded / Resent to customer) als laatste kolom; RTC is de vervoerder die zelf terugstuurt, buiten de klant om.
