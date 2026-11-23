@@ -835,12 +835,14 @@ async function renderAlertSettings(){
   const inp='width:56px;border:1px solid #d2d2d7;border-radius:8px;padding:6px 8px;font-size:13px;outline:none;color:#1d1d1f;text-align:center;';
   el.innerHTML=stores.map(s=>{const t=thr(s);return `
     <div style="border:1px solid #e5e5ea;border-radius:10px;padding:12px 14px;margin-bottom:10px;">
-      <div style="font-size:12px;font-weight:600;color:#1d1d1f;margin-bottom:8px;">${esc(s)}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px;">
+        <div style="font-size:12px;font-weight:600;color:#1d1d1f;">${esc(s)}</div>
+        <button onclick="saveAlertDays(${jsq(s)})" style="padding:7px 12px;border-radius:8px;border:none;background:#0071e3;color:white;font-size:12px;font-weight:500;cursor:pointer;">Save</button>
+      </div>
       <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:12px;color:#1d1d1f;">
         <label style="display:flex;gap:6px;align-items:center;">Not shipped after <input id="ns-${cssId(s)}" type="number" min="1" max="120" value="${t.ns}" style="${inp}"> days</label>
         <label style="display:flex;gap:6px;align-items:center;">Not moving after <input id="nm-${cssId(s)}" type="number" min="1" max="120" value="${t.nm}" style="${inp}"> days</label>
         <label style="display:flex;gap:6px;align-items:center;">Delayed after <input id="dl-${cssId(s)}" type="number" min="1" max="120" value="${t.dl}" style="${inp}"> days</label>
-        <button onclick="saveAlertDays(${jsq(s)})" style="margin-left:auto;padding:7px 12px;border-radius:8px;border:none;background:#0071e3;color:white;font-size:12px;font-weight:500;cursor:pointer;">Save</button>
       </div>
     </div>`;}).join('');
 }
