@@ -305,3 +305,4 @@ Ideas for later (not started):
 - @49: zwarte balk = "SCM ⇄ SUPPLIER" (zichtbaar na Setup).
 - @50 (2026-11-23): kop Requested Solution → **Request to Supplier:**; elke nieuwe regel krijgt een standaardvraag per tab (`ASK`; Pickup point leeg), CS mag overschrijven, bestaande regels blijven onaangeraakt. Naar RTC: een onaangepaste standaardvraag wordt de RTC-vraag, eigen tekst gaat mee. Nog niet gebouwd: leeg supplier-antwoord lichtrood.
 - @51: zwarte-balk-kolommen breder (360/360/140, na Setup). RTC-standaardvraag staat ter discussie.
+- @52: RTC-standaardvraag = "Please provide an update on this return." (merchant akkoord).
