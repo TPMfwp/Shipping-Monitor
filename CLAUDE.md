@@ -301,3 +301,4 @@ Ideas for later (not started):
 - @46: rij 1 = 40px/13pt, rij 2 = 46px/11pt + wrap, achtergrond #efefef (alle tabs, na Setup).
 - Website-testknop (testWebhook) stuurt nu ook de 2 pickup-voorbeelden (2026-11-23).
 - @47 (2026-11-23): zwarte balk = "SCM ↔ SUPPLIER"; RTC-kop = "AUTOMATED" en menu ➕ New RTC return weg (handmatige retouren komen in een andere sheet); rij 2 = 40px; **Setup verwijdert testregels (#TEST / #ZZ)** en meldt hoeveel echte orders er overblijven.
+- @48 + webhook v26 (2026-11-23): kolom **Days in Transit** vóór Last Checkpoint in Not moving, Delayed, Exception, Pickup point en Solved (niet in Info Received/RTC). Formule `=TODAY()-<verzenddatum>`, verzenddatum = `fulfillment_date` (veld `ship_date` in beide sheet-posts); bij verplaatsen naar Solved een vast getal. `syncCols_` voegt de kolom op kop in (kop direct geschreven). Bestaande regels vullen zich bij de volgende ParcelPanel-update.
