@@ -1242,6 +1242,9 @@ async function testWebhook(store){
     await sendSlack(url,nmb,'⏸️ Not Moving [EXAMPLE]');
     await sendSlack(url,buildBlocks(`🐌 Shipment Delayed — In Transit ${t.dl}+ Days [EXAMPLE]`,store,'#ER971235','Mary Johnson','mary.johnson@email.com','YT2609100704258979',today,`This shipment has been in transit for ${t.dl}+ days without delivery. Why has this order not been delivered yet? Please provide an update. 🙏`),'🐌 Delayed In Transit [EXAMPLE]');
     await sendSlack(url,buildBlocks('⚠️ Shipment Exception — Action Required [EXAMPLE]',store,'#ER971236','Susan Williams','susan.williams@email.com','YT2609100704258980',today,'This shipment has an exception status. Please investigate and provide an update. 🙏'),'⚠️ Exception [EXAMPLE]');
+    const rb=buildBlocks('↩️ Shipment Returning to Sender [EXAMPLE]',store,'#ER971240','Grace Hughes','grace.hughes@email.com','YT2609100704258984',today,'Please provide an update on this return. 🙏');
+    rb[2].fields.push({type:'mrkdwn',text:'*Reason:*\nReturned to sender'},{type:'mrkdwn',text:'*Carrier:*\nDHL'});
+    await sendSlack(url,rb,'↩️ Returning to Sender [EXAMPLE]');
     // Zelfde velden als de echte pickup-meldingen uit de webhook-functie
     const pickup=(header,order,customer,tracking,since,ask)=>{const b=buildBlocks(header,store,order,customer,'',tracking,'',ask);const f=b[2].fields;b[2].fields=[f[0],f[1],f[2],f[5],{type:'mrkdwn',text:`*At pickup point since:*\n${since}`},{type:'mrkdwn',text:'*Carrier:*\nDHL'}];return b;};
     const ago2=new Date(Date.now()-2*86400000).toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'});
