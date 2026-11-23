@@ -315,3 +315,4 @@ Ideas for later (not started):
 
 - 2026-11-23 sheet @54: Previous Alert (Pickup point); RTC met Customer Email, Last Checkpoint en Current Status (automatisch), Return Status in de zwarte balk. RTC-regel blijft bij Delivered staan tot Issue Status Solved.
 - 2026-11-23 sheet @55: RTC Return Status vervangen door Resolution (Refunded / Resent to customer) als laatste kolom; RTC is de vervoerder die zelf terugstuurt, buiten de klant om.
+- 2026-11-23 sheet @56 + webhook v31: pickup-herinnering na 72 uur (was 48; testberichten op de site ook). Pickup point Alert/Previous Alert 400 breed. RTC en Solved: kolom New Tracking (supplier vult in); oude pakket-tracking blijft de sleutel.

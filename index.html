@@ -1242,7 +1242,7 @@ function sheetExamples(store){
     row(4,'Exception','⚠️ Exception','Susan Williams','YT2609100704258980',8,'Exception','Address issue',{reason:'Address issue'}),
     row(5,'Exception','⚠️ Exception','Grace Hughes','YT2609100704258984',12,'Exception','Returned to sender',{reason:'Returned to sender'}),
     row(6,'Pickup point','📍 Ready for pickup — email customer','Emma Clarke','YT2609100704258981',9,'Ready for pickup','Ready for pickup'),
-    row(7,'Pickup point','📍 Not picked up after 48+ hours — email customer again','Laura Fisher','YT2609100704258982',11,'Ready for pickup','Ready for pickup'),
+    row(7,'Pickup point','📍 Not picked up after 72+ hours — email customer again','Laura Fisher','YT2609100704258982',11,'Ready for pickup','Ready for pickup'),
   ];
 }
 // text/plain: anders blokkeert de browser het verzoek naar Google. Pas goed als het sheet-script zelf ok antwoordt.
@@ -1286,9 +1286,9 @@ async function testSlack(store,url){
     await sendSlack(url,rb,'↩️ Returning to Sender [EXAMPLE]');
     // Zelfde velden als de echte pickup-meldingen uit de webhook-functie
     const pickup=(header,order,customer,tracking,since,ask)=>{const b=buildBlocks(header,store,order,customer,'',tracking,'',ask);const f=b[2].fields;b[2].fields=[f[0],f[1],f[2],f[5],{type:'mrkdwn',text:`*At pickup point since:*\n${since}`},{type:'mrkdwn',text:'*Carrier:*\nDHL'}];return b;};
-    const ago2=new Date(Date.now()-2*86400000).toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'});
+    const ago3=new Date(Date.now()-3*86400000).toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'});
     await sendSlack(url,pickup('📍 Shipment Ready for Pickup [EXAMPLE]','#TESTWEB6','Emma Clarke','YT2609100704258981',today,'Please email the customer to pick up this parcel as soon as possible. 🙏'),'📍 Ready for Pickup [EXAMPLE]');
-    await sendSlack(url,pickup('📍 Shipment Still Not Picked Up — 48+ Hours [EXAMPLE]','#TESTWEB7','Laura Fisher','YT2609100704258982',ago2,'This parcel has not been picked up yet. Please email the customer again. 🙏'),'📍 Still Not Picked Up [EXAMPLE]');
+    await sendSlack(url,pickup('📍 Shipment Still Not Picked Up — 72+ Hours [EXAMPLE]','#TESTWEB7','Laura Fisher','YT2609100704258982',ago3,'This parcel has not been picked up yet. Please email the customer again. 🙏'),'📍 Still Not Picked Up [EXAMPLE]');
 }
 
 function showSlackMsg(msg,color,ms=4000){
