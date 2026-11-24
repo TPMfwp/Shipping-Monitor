@@ -210,10 +210,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
           <input id="perf-norm" type="number" min="1" max="60" placeholder="e.g. 14" style="width:100%;border:1px solid #d2d2d7;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;">
         </div>
         <div>
-          <div style="font-size:11px;color:#86868b;margin-bottom:4px;">Slack webhook (performance alerts)</div>
-          <input id="perf-webhook" type="url" placeholder="https://hooks.slack.com/..." style="width:100%;border:1px solid #d2d2d7;border-radius:8px;padding:7px 10px;font-size:11px;font-family:monospace;outline:none;">
-        </div>
-        <div>
           <div style="font-size:11px;color:#86868b;margin-bottom:4px;">Goal: % on time</div>
           <input id="perf-alert-ontime" type="number" min="0" max="100" placeholder="e.g. 80" style="width:100%;border:1px solid #d2d2d7;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;">
         </div>
@@ -224,7 +220,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
       </div>
       <div style="display:flex;gap:8px;align-items:center;">
         <button onclick="savePerfSettings()" style="padding:7px 16px;border-radius:8px;border:none;background:#0071e3;color:white;font-size:12px;font-weight:500;cursor:pointer;">Save</button>
-        <button onclick="testPerfWebhook()" style="padding:7px 16px;border-radius:8px;border:1px solid #d2d2d7;background:white;color:#1d1d1f;font-size:12px;font-weight:500;cursor:pointer;">Test</button>
         <div id="perf-settings-msg" style="font-size:12px;color:#34c759;"></div>
       </div>
     </div>
@@ -1047,12 +1042,11 @@ async function savePerfSettings(){
   const store=curStore==='all'?null:curStore;
   if(!store){showPerfMsg('Select a store first.');return;}
   const norm=parseInt(document.getElementById('perf-norm').value)||14;
-  const webhook=document.getElementById('perf-webhook').value.trim();
   const alert_ontime=parseFloat(document.getElementById('perf-alert-ontime').value)||null;
   const clean=parseFloat(document.getElementById('perf-alert-exc').value);
   const alert_exc=clean>0&&clean<100?100-clean:null;
-  await sb.from('stores').upsert({store_name:store,perf_norm:norm,perf_webhook:webhook,perf_alert_ontime:alert_ontime,perf_alert_exc:alert_exc},{onConflict:'store_name'});
-  perfSettingsCache[store]={norm,webhook,alert_ontime,alert_exc};
+  await sb.from('stores').upsert({store_name:store,perf_norm:norm,perf_alert_ontime:alert_ontime,perf_alert_exc:alert_exc},{onConflict:'store_name'});
+  perfSettingsCache[store]={...perfSettingsCache[store],norm,alert_ontime,alert_exc};
   showPerfMsg('Saved.');
   renderPerformance();
 }
@@ -1066,18 +1060,25 @@ function showPerfMsg(msg){
 
 // Test = het echte weekrapport van deze store via perf-check (force_weekly: elke dag, slaat niets op).
 // Gaat naar de OPGESLAGEN webhook, dus eerst opslaan. perf-check stuurt geen CORS-headers → no-cors, antwoord niet leesbaar.
-async function testPerfWebhook(){
-  const store=curStore==='all'?null:curStore;
-  if(!store){showPerfMsg('Select a store first.');return;}
-  if(!document.getElementById('perf-webhook').value.trim()){showPerfMsg('No webhook URL filled in.');return;}
-  await savePerfSettings();
-  showPerfMsg('Sending...');
+async function testPerfWebhook(store){
+  if(!(perfSettingsCache[store]||{}).webhook)return showSlackMsg('Save a performance link first.','#ff3b30');
+  if(document.getElementById('pw-'+cssId(store)).value.trim()!==perfSettingsCache[store].webhook)return showSlackMsg('Link changed — press Save first.','#ff3b30');
+  showSlackMsg('Sending...','#86868b',60000);
   const{data,error}=await sb.from('app_settings').select('value').eq('key','webhook_token').single();
-  if(error||!data){showPerfMsg('Could not load token — refresh and try again.');return;}
+  if(error||!data)return showSlackMsg('Could not load token — refresh and try again.','#ff3b30');
   try{
     await fetch(`https://frxyfmfjtadyxhfogdvt.supabase.co/functions/v1/perf-check?force_weekly=1&store=${encodeURIComponent(store)}&token=${encodeURIComponent(data.value)}`,{mode:'no-cors'});
-    showPerfMsg('Weekly report sent — check Slack.');
-  }catch(e){showPerfMsg('Error: '+e.message);}
+    showSlackMsg('Weekly report requested — check Slack. No report if there were no orders this week.','#34c759',10000);
+  }catch(e){showSlackMsg('Error: '+e.message,'#ff3b30');}
+}
+async function savePerfWebhook(store){
+  if(!sb)return;
+  const url=document.getElementById('pw-'+cssId(store))?.value?.trim()||'';
+  if(url&&!isHook(url))return showSlackMsg('A Slack link must start with https://hooks.slack.com/','#ff3b30');
+  const{error}=await sb.from('stores').upsert({store_name:store,perf_webhook:url},{onConflict:'store_name'});
+  if(error)return showSlackMsg('Save failed: '+error.message,'#ff3b30');
+  perfSettingsCache[store]={norm:14,...perfSettingsCache[store],webhook:url};
+  showSlackMsg(url?'Performance link saved.':'Performance link removed.','#34c759');
 }
 
 function togglePerfSettings(){
@@ -1092,7 +1093,6 @@ function loadPerfSettingsUI(){
   if(!store)return;
   const s=perfSettingsCache[store]||{};
   document.getElementById('perf-norm').value=s.norm||'';
-  document.getElementById('perf-webhook').value=s.webhook||'';
   document.getElementById('perf-alert-ontime').value=s.alert_ontime||'';
   // Opgeslagen als max % problemen (perf_alert_exc), getoond als doel % zonder problemen
   document.getElementById('perf-alert-exc').value=s.alert_exc?100-s.alert_exc:'';
@@ -1216,17 +1216,25 @@ async function notifySlack(d, section){
 
 async function renderSlackSettings(){
   const stores=[...new Set(all.map(d=>d.store_name).filter(Boolean))].sort();
-  await loadStores();
+  await Promise.all([loadStores(),loadPerfSettings()]);
   const el=document.getElementById('slack-store-list');
   if(!stores.length){el.innerHTML='<div style="font-size:13px;color:#86868b;">Geen stores gevonden.</div>';return;}
   el.innerHTML=stores.map(s=>`
     <div style="border:1px solid #e5e5ea;border-radius:10px;padding:12px 14px;margin-bottom:10px;">
       <div style="font-size:12px;font-weight:600;color:#1d1d1f;margin-bottom:6px;">${esc(s)}</div>
+      <div style="font-size:11px;color:#86868b;margin:0 0 4px;">Slack webhook (alerts)</div>
       <div style="display:flex;gap:6px;align-items:center;">
         <input id="wh-${cssId(s)}" type="url" placeholder="https://hooks.slack.com/services/..." value="${esc(storesCache[s]||'')}"
           style="flex:1;border:1px solid #d2d2d7;border-radius:8px;padding:7px 10px;font-size:11px;font-family:monospace;outline:none;color:#1d1d1f;">
         <button onclick="saveWebhook(${jsq(s)})" style="padding:7px 12px;border-radius:8px;border:none;background:#0071e3;color:white;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;">Save</button>
         <button onclick="testWebhook(${jsq(s)})" style="padding:7px 12px;border-radius:8px;border:1px solid #d2d2d7;background:white;color:#1d1d1f;font-size:12px;cursor:pointer;white-space:nowrap;">Test</button>
+      </div>
+      <div style="font-size:11px;color:#86868b;margin:10px 0 4px;">Slack webhook (performance)</div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <input id="pw-${cssId(s)}" type="url" placeholder="https://hooks.slack.com/services/..." value="${esc((perfSettingsCache[s]||{}).webhook||'')}"
+          style="flex:1;min-width:0;border:1px solid #d2d2d7;border-radius:8px;padding:7px 10px;font-size:11px;font-family:monospace;outline:none;color:#1d1d1f;">
+        <button onclick="savePerfWebhook(${jsq(s)})" style="padding:7px 12px;border-radius:8px;border:none;background:#0071e3;color:white;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;">Save</button>
+        <button onclick="testPerfWebhook(${jsq(s)})" style="padding:7px 12px;border-radius:8px;border:1px solid #d2d2d7;background:white;color:#1d1d1f;font-size:12px;cursor:pointer;white-space:nowrap;">Test</button>
       </div>
       <div style="font-size:11px;color:#86868b;margin:10px 0 4px;">Google Sheet link (sheet menu → 🔗 Link for monitor)</div>
       <div style="display:flex;gap:6px;align-items:center;">

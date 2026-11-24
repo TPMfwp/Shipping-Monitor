@@ -335,3 +335,4 @@ Ideas for later (not started):
 - perf-check: twee rapporten (oude orders → `perf_webhook`, nieuwe → `switch_perf_webhook`), log-key krijgt `|new`. Dashboard: keuze All / Old / New supplier in Supplier Performance, alleen zichtbaar bij een actieve switch.
 - Eén sheet per winkel (keuze merchant); geen Supplier-kolom.
 - Volgende wissel (B → C): links van B naar de gewone velden, dan de switch leegmaken/opnieuw invullen.
+- 2026-11-24: huidige performance-link (`perf_webhook`) + Test (weekrapport) staan nu ook in Manage stores → Slack; Supplier Performance → Settings heeft alleen norm en doelen (`savePerfSettings` raakt `perf_webhook` niet meer aan).
