@@ -204,7 +204,7 @@ filter; table is sortable, 100 rows per page. Store tabs are derived from distin
   the previous period of the same length next to it ("last week" / "prev 30d").
 - On time % (orders DELIVERED in the period, ≤ that store's `perf_norm`), Without problems % (orders SHIPPED in
   the period shifted 14 days back, `PERF_LAG`; problem = current problem status or `action_log` exception history),
-  Delivery time (avg transit, + processing), Delivered count. Footnote `perf-note` only shows "No orders in the last N days" for an empty period (explanation text removed — too busy).
+  Order to delivered (avg from order, split in processing + waiting for pickup + transit), Delivered count. Footnote `perf-note` only shows "No orders in the last N days" for an empty period (explanation text removed — too busy).
 - Colour like Slack (green on goal / orange within 10pt resp. 5pt / red below), only per store and with ≥20 orders.
 - Settings panel (hidden on "All stores") saves `perf_*` to `stores`; goal fields are "% on time" and "% without
   problems" (stored as `perf_alert_exc = 100 − input`). Test saves first, then calls `perf-check?force_weekly=1&store=`
@@ -346,7 +346,7 @@ Ideas for later (not started):
 
 ### Samen nalopen / nadenken (2026-11-24)
 - Orders en links komen ALLEEN via ParcelPanel-webhooks binnen (per zending); geen Shopify-koppeling. Order zonder link = waarschijnlijk onzichtbaar.
-- OPEN 1: levertijd/On Time telt vanaf tracking link, merchant wil bestelling → bezorgd zien ("Order to Delivered"; sheet, Slack en monitor). Voorstel: alles vanaf bestelling, norm 14 of 15 beslissen. Data 698 bezorgd: link 12,3 d / 79% binnen 14; bestelling 13,2 d / 75% binnen 14, 82% binnen 15, 87% binnen 16. Processing rondt nu per order naar beneden af.
-- OPEN 2: melding "geen tracking link" (voorstel: Shopify admin-webhooks order creation + cancellation, melding na 3 dagen). Niet gebouwd.
+- KLAAR 1 (sheet @62, perf-check v24, 2026-11-24): On Time en **Order to Delivered** tellen vanaf order_date (zonder besteldatum: vanaf label) in Slack, sheet en monitor; gemiddelden op 1 decimaal, niet meer per order afgerond. Transit in de monitor is nu ook exclusief wachten op ophalen. `perf_weekly_log` blijft hele getallen. Bestaande Performance-tab krijgt de kolom via `syncPerf_`. Bewust ongewijzigd: pakketmeldingen (Delayed 15 d, Days in Transit) tellen vanaf de tracking link. Regel 'binnen N dagen' = hele dagen (14 d 23 u telt als 14). OPEN: norm 14 (75%) of 15 (82%), doel 80%; staat op 14.
+- OPEN 2: melding "geen tracking link" (voorstel: Shopify admin-webhooks order creation + cancellation, melding na 3 dagen). Niet gebouwd. Merchant denkt aan 500 orders per dag; advies: bouwen vóór opschalen, met 1 Slack-bericht per dag per winkel + waarschuwing als er geen Shopify-orders binnenkomen. Wacht op ja; migratie 2x geweigerd.
 - OPEN 3: alle Slack-berichten nalopen.
 - pickup_date: 0 van 698 gevuld (pas opgeslagen sinds 2026-11-16); checken bij eerste echte pakketten.
