@@ -336,3 +336,10 @@ Ideas for later (not started):
 - Eén sheet per winkel (keuze merchant); geen Supplier-kolom.
 - Volgende wissel (B → C): links van B naar de gewone velden, dan de switch leegmaken/opnieuw invullen.
 - 2026-11-24: huidige performance-link (`perf_webhook`) + Test (weekrapport) staan nu ook in Manage stores → Slack; Supplier Performance → Settings heeft alleen norm en doelen (`savePerfSettings` raakt `perf_webhook` niet meer aan).
+
+### Performance-tab in de sheet (2026-11-24)
+- Sheet @61 + perf-check v23: elk week-/maandrapport dat naar Slack gaat, wordt ook één vaste regel in de tab **Performance** (laatste tab, nieuwste bovenaan). Bij een supplier-switch één regel per supplier (`Old (before #X)` / `New (from #X)`).
+- Zelfde report + period + supplier = zelfde regel bijwerken, nooit dubbel. Lukt de sheet niet → `alert_outbox` (kind sheet), cron alert-retry probeert opnieuw.
+- Test-knop van performance schrijft `Week [EXAMPLE]`; "Delete test rows" haalt alle `[EXAMPLE]`-regels weg, echte rapporten blijven.
+- Suppliers uit de sheet halen (Share) raakt niets: het script draait als de eigenaar. Wie toegang heeft, ziet ook deze tab.
+- OPEN: samen alle Slack-berichten nalopen (alle meldingen, switch oud/nieuw kanaal, week-/maandrapport + Performance-regel).
