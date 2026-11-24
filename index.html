@@ -181,7 +181,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
     </div>
     <div class="perf-grid">
       <div>
-        <div style="font-size:11px;color:#86868b;margin-bottom:3px;">Delivery time</div>
+        <div style="font-size:11px;color:#86868b;margin-bottom:3px;">Order to delivered</div>
         <div id="perf-avg" style="font-size:22px;font-weight:600;letter-spacing:-0.5px;">—</div>
         <div id="perf-avg-delta" style="font-size:11px;color:#86868b;margin-top:2px;"></div>
       </div>
@@ -206,7 +206,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
     <div id="perf-settings" style="display:none;margin-top:1rem;padding-top:1rem;border-top:1px solid #f2f2f7;">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
         <div>
-          <div style="font-size:11px;color:#86868b;margin-bottom:4px;">On time norm (days)</div>
+          <div style="font-size:11px;color:#86868b;margin-bottom:4px;">On time norm (days from order)</div>
           <input id="perf-norm" type="number" min="1" max="60" placeholder="e.g. 14" style="width:100%;border:1px solid #d2d2d7;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;">
         </div>
         <div>
@@ -1099,7 +1099,7 @@ function loadPerfSettingsUI(){
 }
 
 // Zelfde definities als perf-check (Slack-rapport), zodat dashboard en rapport dezelfde cijfers geven:
-// - on time/levertijd: orders BEZORGD in de periode; levertijd = verzonden (label) → bezorgd, verwerking = besteld → verzonden
+// - on time/levertijd: orders BEZORGD in de periode; levertijd = besteld → bezorgd, verwerking = besteld → verzonden (label)
 //   wachten op ophalen = label → opgehaald (pickup_date), alleen voor orders waar ParcelPanel dat meestuurde
 // - zonder problemen: orders VERZONDEN in de periode, 14 dagen terug (nieuwere hebben nog geen tijd gehad om vast te lopen),
 //   probleem = huidige probleemstatus of ooit in de exception-sectie (action_log)
@@ -1109,16 +1109,16 @@ let perfPeriod='all';
 let perfSup='all';   // all / old / new, alleen zichtbaar als de winkel een supplier-switch heeft
 function setPerfSup(p){perfSup=p;renderPerformance();}
 function setPerfPeriod(p){perfPeriod=p;renderPerformance();}
-const perfMean=xs=>xs.length?Math.round(xs.reduce((a,b)=>a+b,0)/xs.length):null;
+const perfMean=xs=>xs.length?Math.round(xs.reduce((a,b)=>a+b,0)/xs.length*10)/10:null;
 const perfIn=(d,from,to)=>{if(!d)return false;const t=new Date(d).getTime();return t>=from&&t<to;};
 function perfDelivery(data,from,to){
   const normOf=d=>(perfSettingsCache[d.store_name]||{}).norm||14;
   const del=data.filter(d=>d.status==='DELIVERED'&&d.fulfillment_date&&perfIn(d.last_checkpoint_time,from,to))
-    .map(d=>{const tr=Math.floor((new Date(d.last_checkpoint_time)-new Date(d.fulfillment_date))/86400000),w=d.pickup_date?Math.floor((new Date(d.pickup_date)-new Date(d.fulfillment_date))/86400000):null;
-      return {tr,wait:w!==null&&w>=0&&w<=60&&w<=tr?w:null,pr:d.order_date?Math.floor((new Date(d.fulfillment_date)-new Date(d.order_date))/86400000):null,norm:normOf(d)};})
-    .filter(x=>x.tr>=0&&x.tr<=120);
-  const ok=del.filter(x=>x.tr<=x.norm).length;
-  return {n:del.length,onTime:del.length?Math.round(ok/del.length*100):null,transit:perfMean(del.map(x=>x.tr)),wait:perfMean(del.filter(x=>x.wait!==null).map(x=>x.wait)),proc:perfMean(del.filter(x=>x.pr!==null&&x.pr>=0&&x.pr<=60).map(x=>x.pr))};
+    .map(d=>{const gap=(a,b)=>(new Date(b)-new Date(a))/86400000,ship=gap(d.fulfillment_date,d.last_checkpoint_time),w=d.pickup_date?gap(d.fulfillment_date,d.pickup_date):null,wait=w!==null&&w>=0&&w<=60&&w<=ship?w:null;
+      return {total:gap(d.order_date||d.fulfillment_date,d.last_checkpoint_time),ship,wait,tr:wait!==null?ship-wait:ship,pr:d.order_date?gap(d.order_date,d.fulfillment_date):null,norm:normOf(d)};})
+    .filter(x=>x.total>=0&&x.total<=120&&x.ship>=0);
+  const ok=del.filter(x=>Math.floor(x.total)<=x.norm).length;
+  return {n:del.length,onTime:del.length?Math.round(ok/del.length*100):null,total:perfMean(del.map(x=>x.total)),transit:perfMean(del.map(x=>x.tr)),wait:perfMean(del.filter(x=>x.wait!==null).map(x=>x.wait)),proc:perfMean(del.filter(x=>x.pr!==null&&x.pr>=0&&x.pr<=60).map(x=>x.pr))};
 }
 function perfProblems(data,probIds,from,to){
   const sh=data.filter(d=>perfIn(d.fulfillment_date,from,to));
@@ -1155,8 +1155,8 @@ function renderPerformance(){
   set('perf-ontime-delta',join([goalOn!==null?`goal ${goalOn}%`:(store!=='all'?`within ${s.norm||14}d`:''),prev&&prev.onTime!==null?`${prevL}: ${prev.onTime}%`:'',few(cur.n)]));
   set('perf-exc',pc.clean!==null?pc.clean+'%':'—',color(pc.clean,goalClean,pc.n,5));
   set('perf-exc-delta',join([goalClean!==null?`goal ${goalClean}%`:'',pp&&pp.clean!==null?`${prevL}: ${pp.clean}%`:'',few(pc.n)]));
-  set('perf-avg',cur.transit!==null?cur.transit+'d':'—');
-  set('perf-avg-delta',join([cur.proc!==null?`+ ${cur.proc}d processing`:'',cur.wait!==null?`incl. ${cur.wait}d waiting for pickup`:'',prev&&prev.transit!==null?`${prevL}: ${prev.transit}d`:'']));
+  set('perf-avg',cur.total!==null?cur.total+'d':'—');
+  set('perf-avg-delta',join([[cur.proc!==null?`${cur.proc}d processing`:'',cur.wait!==null?`${cur.wait}d waiting for pickup`:'',cur.transit!==null?`${cur.transit}d transit`:''].filter(Boolean).join(' + '),prev&&prev.total!==null?`${prevL}: ${prev.total}d`:'']));
   set('perf-delivered',cur.n);
   set('perf-delivered-delta',N?(prev?`${prevL}: ${prev.n}`:''):'all time');
   // Alleen een melding bij een lege periode, anders leeg (uitleg maakte het blok alleen drukker)
