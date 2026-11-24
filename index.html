@@ -885,7 +885,9 @@ function shopBlock(s){
 async function copyShopUrl(store,b){
   const u=shopUrl(store);
   try{if(!u)throw 0;await navigator.clipboard.writeText(u);b.textContent='Copied';}catch(e){b.textContent='Copy failed';}
-  setTimeout(()=>b.textContent='Copy link',1500);
+  // Nieuwe winkel meteen bekend maken, anders weigert shopify-orders de orders; een bestaande winkel blijft ongewijzigd
+  if(u){const{error}=await sb.from('stores').upsert({store_name:store},{onConflict:'store_name',ignoreDuplicates:true});if(error)b.textContent='Store not saved, click again';}
+  setTimeout(()=>b.textContent='Copy link',b.textContent==='Copied'?1500:5000);
 }
 
 async function saveAlertDays(store){
