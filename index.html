@@ -493,7 +493,7 @@ function hasTracking(d){const t=d.tracking_number||'';return t&&t!=='Unknown'&&t
 
 // Per-store actiegrenzen (stores.alert_not_shipped_days / alert_delayed_days / alert_not_moving_days); zelfde logica als de webhook-functie
 let thrCache={};
-function thr(store){return thrCache[store]||{ns:5,dl:15,nm:5,nt:3};}
+function thr(store){return thrCache[store]||{ns:5,dl:15,nm:5,nt:2};}
 function getSection(d){
   if(d.status==='CANCELLED'||d.status==='RESOLVED')return null;
   if(!isNew(d)||!hasTracking(d))return null;
@@ -1349,7 +1349,7 @@ async function saveSheetLink(store){
 // Voorbeelden voor de sheet, via dezelfde weg als echte meldingen (doPost): elke tab een paar regels, en alle verhuizingen komen langs.
 // #TEST-nummers, zodat Delete test rows / Setup in de sheet ze weghaalt; een nieuwe test vervangt de vorige #TESTWEB-regels.
 function sheetExamples(store){
-  const t=thr(store),nt=t.nt||3,ago=n=>new Date(Date.now()-n*86400000).toISOString();
+  const t=thr(store),nt=t.nt||2,ago=n=>new Date(Date.now()-n*86400000).toISOString();
   const NAMES=['Jane Smith','Olivia Turner','Mary Johnson','Susan Williams','Grace Hughes','Laura Fisher','Emma Clarke','Daniel Moore','Anna Becker','Peter Novak','Sophie Martin','Lucas Meyer'],CAR=['DHL','UPS','GLS','DPD'],PROD=['Example product','Example set','Example jacket'];
   const who=n=>({order:'#TESTWEB'+n,customer:NAMES[n%12],email:NAMES[n%12].toLowerCase().replace(' ','.')+'@example.com',product:`x${n%4===0?2:1} ${PROD[n%3]}`});
   const trk=n=>'YTTEST'+String(100000+n),link=n=>'https://t.17track.net/en#nums='+trk(n);
@@ -1438,7 +1438,7 @@ async function testSlack(store,url){
     await send(pickup('📍 Shipment Ready for Pickup [EXAMPLE]','#TESTWEB6','Emma Clarke','YT2609100704258981',today,'Please email the customer to pick up this parcel as soon as possible. 🙏'),'📍 Ready for Pickup [EXAMPLE]');
     await send(pickup('📍 Shipment Still Not Picked Up — 72+ Hours [EXAMPLE]','#TESTWEB6','Emma Clarke','YT2609100704258981',ago3,'This parcel has not been picked up yet. Please email the customer again. 🙏'),'📍 Still Not Picked Up [EXAMPLE]');
     const mk=(header,fields,...texts)=>[{type:'divider'},{type:'section',text:{type:'mrkdwn',text:`*${header} [EXAMPLE]*`}},{type:'section',fields:fields.map(([a,b])=>({type:'mrkdwn',text:`*${a}:*\n${b}`}))},...texts.map(x=>({type:'section',text:{type:'mrkdwn',text:x}})),{type:'divider'}];
-    const trk=x=>`${x}\n<https://t.17track.net/en#nums=${x}|17track>`,base=(o,c,x)=>[['Store',store],['Order',o],['Customer',c],['Tracking',trk(x)]],dm=d=>new Date(Date.now()-d*86400000).toLocaleDateString('en-GB'),nt=t.nt||3;
+    const trk=x=>`${x}\n<https://t.17track.net/en#nums=${x}|17track>`,base=(o,c,x)=>[['Store',store],['Order',o],['Customer',c],['Tracking',trk(x)]],dm=d=>new Date(Date.now()-d*86400000).toLocaleDateString('en-GB'),nt=t.nt||2;
     await send(mk(`🐌 Shipment Still Not Delivered — ${t.dl*2}+ Days`,[...base('#TESTWEB18','Emma Clarke','YTTEST100018'),['Shipped',dm(t.dl*2)],['Delayed alert sent',dm(t.dl)]],'This shipment has still not been delivered. Please provide an update. 🙏'),'🐌 Still Not Delivered [EXAMPLE]');
     await send(mk('🔄 Shipment Update — Exception Changed',[...base('#TESTWEB23','Lucas Meyer','YTTEST100023'),['Before','Delivery exception'],['Now','Held at customs']],'The exception status of this shipment has changed. Please provide an update. 🙏'),'🔄 Exception Changed [EXAMPLE]');
     await send(mk('🚪 Delivery Attempt Failed Again',[...base('#TESTWEB28','Grace Hughes','YTTEST100028'),['Reason','Recipient not available'],['Failed on',today],['Carrier','DHL']],'Please email the customer again to arrange a new delivery. 🙏'),'🚪 Failed Again [EXAMPLE]');
