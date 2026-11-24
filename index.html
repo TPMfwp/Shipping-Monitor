@@ -405,8 +405,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
     </div>
 
     <div id="tab-alerts-content" style="display:none;">
-      <p style="font-size:13px;color:#86868b;margin-bottom:1.25rem;line-height:1.6;">Per store: after how many days an order enters an action section and gets a Slack alert. Exceptions always alert immediately.</p>
-      <p style="font-size:12px;color:#86868b;margin-bottom:1.25rem;line-height:1.6;">Lowering a number can trigger many alerts at once for orders already past the new limit. Raising it does not undo alerts already sent.</p>
+      <p style="font-size:12px;color:#86868b;margin-bottom:1rem;line-height:1.6;">After how many days you get an alert. Exceptions always alert right away.<br>Careful: a lower number can send many alerts at once. Raising it does not undo alerts already sent.</p>
       <div id="alerts-store-list"><div style="font-size:13px;color:#86868b;">Loading...</div></div>
       <div id="alerts-msg" style="font-size:12px;margin-top:8px;min-height:18px;"></div>
     </div>
@@ -494,7 +493,7 @@ function hasTracking(d){const t=d.tracking_number||'';return t&&t!=='Unknown'&&t
 
 // Per-store actiegrenzen (stores.alert_not_shipped_days / alert_delayed_days / alert_not_moving_days); zelfde logica als de webhook-functie
 let thrCache={};
-function thr(store){return thrCache[store]||{ns:5,dl:15,nm:5};}
+function thr(store){return thrCache[store]||{ns:5,dl:15,nm:5,nt:3};}
 function getSection(d){
   if(d.status==='CANCELLED'||d.status==='RESOLVED')return null;
   if(!isNew(d)||!hasTracking(d))return null;
@@ -843,7 +842,7 @@ function switchTab(tab){
 
 async function renderAlertSettings(){
   const stores=[...new Set(all.map(d=>d.store_name).filter(Boolean))].sort();
-  await loadStores();
+  await Promise.all([loadStores(),loadShop()]);
   const el=document.getElementById('alerts-store-list');
   if(!stores.length){el.innerHTML='<div style="font-size:13px;color:#86868b;">No stores found.</div>';return;}
   const inp='width:56px;border:1px solid #d2d2d7;border-radius:8px;padding:6px 8px;font-size:13px;outline:none;color:#1d1d1f;text-align:center;';
@@ -853,21 +852,49 @@ async function renderAlertSettings(){
         <div style="font-size:12px;font-weight:600;color:#1d1d1f;">${esc(s)}</div>
         <button onclick="saveAlertDays(${jsq(s)})" style="padding:7px 12px;border-radius:8px;border:none;background:#0071e3;color:white;font-size:12px;font-weight:500;cursor:pointer;">Save</button>
       </div>
-      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:12px;color:#1d1d1f;">
-        <label style="display:flex;gap:6px;align-items:center;">Not shipped after <input id="ns-${cssId(s)}" type="number" min="1" max="120" value="${t.ns}" style="${inp}"> days</label>
-        <label style="display:flex;gap:6px;align-items:center;">Not moving after <input id="nm-${cssId(s)}" type="number" min="1" max="120" value="${t.nm}" style="${inp}"> days</label>
-        <label style="display:flex;gap:6px;align-items:center;">Delayed after <input id="dl-${cssId(s)}" type="number" min="1" max="120" value="${t.dl}" style="${inp}"> days</label>
-      </div>
+      ${[['nt','No tracking link','Order has no link yet. Empty = off.',t.nt],['ns','Not shipped','Link exists, parcel not handed over yet.',t.ns],['nm','Not moving','On its way, but no new scan.',t.nm],['dl','Delayed','On its way too long.',t.dl]].map(([k,l,hint,v])=>`
+      <label style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:6px 0;font-size:12px;color:#1d1d1f;">
+        <span><span style="font-weight:500;">${l}</span><br><span style="font-size:11px;color:#86868b;">${hint}</span></span>
+        <span style="white-space:nowrap;"><input id="${k}-${cssId(s)}" type="number" min="1" max="120" value="${v??''}" style="${inp}"> days</span>
+      </label>`).join('')}
+      ${shopBlock(s)}
     </div>`;}).join('');
 }
 
+// Shopify-koppeling: nodig voor de melding 'No tracking link'. Status komt uit de laatst ontvangen order.
+let shopToken='',shopLast={};
+async function loadShop(){
+  const stores=[...new Set(all.map(d=>d.store_name).filter(Boolean))];
+  const[tok,...last]=await Promise.all([sb.from('app_settings').select('value').eq('key','webhook_token').single(),
+    ...stores.map(s=>sb.from('shop_orders').select('received_at').eq('store_name',s).order('received_at',{ascending:false}).limit(1).maybeSingle())]);
+  shopToken=tok.data?.value||'';shopLast={};
+  stores.forEach((s,i)=>{shopLast[s]=last[i].data?.received_at||null;});
+}
+const shopUrl=s=>shopToken?`${SUPABASE_URL}/functions/v1/shopify-orders?store=${encodeURIComponent(s)}&token=${shopToken}`:'';
+function shopBlock(s){
+  const last=shopLast[s],step=(n,t)=>`<div class="step"><div class="step-num">${n}</div><div class="step-text">${t}</div></div>`;
+  return `<details style="margin-top:10px;border:1px solid ${last?'#34c759':'#e5e5ea'};border-radius:10px;padding:10px 12px;background:#f9f9fb;">
+        <summary style="cursor:pointer;font-size:12px;font-weight:600;color:#1d1d1f;">Connect Shopify <span style="font-weight:500;color:${last?'#1a7a3a':'#86868b'};">· ${last?'Connected':'No orders received yet'}</span></summary>
+        <div style="font-size:11px;color:#86868b;margin:6px 0 12px;line-height:1.5;">${last?`Last order received: ${new Date(last).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}.`:'Only needed for "No tracking link". Shopify then sends each new order here.'}</div>
+        ${step(1,'In Shopify: <strong>Settings → Notifications → Webhooks → Create webhook</strong>')}
+        ${step(2,'Event <strong>Order creation</strong>, format <strong>JSON</strong>')}
+        ${step(3,`URL: paste this link → <strong>Save</strong><br><button onclick="copyShopUrl(${jsq(s)},this)" style="margin-top:6px;padding:5px 12px;border-radius:8px;border:1px solid #d2d2d7;background:white;color:#1d1d1f;font-size:12px;cursor:pointer;">Copy link</button><div style="font-size:11px;color:#86868b;margin-top:6px;">Secret link, do not share.</div>`)}
+        ${step(4,'Do the same once more with event <strong>Order cancellation</strong> (same link)')}
+      </details>`;
+}
+async function copyShopUrl(store,b){
+  const u=shopUrl(store);
+  try{if(!u)throw 0;await navigator.clipboard.writeText(u);b.textContent='Copied';}catch(e){b.textContent='Copy failed';}
+  setTimeout(()=>b.textContent='Copy link',1500);
+}
+
 async function saveAlertDays(store){
-  const ns=parseInt(document.getElementById('ns-'+cssId(store))?.value),dl=parseInt(document.getElementById('dl-'+cssId(store))?.value),nm=parseInt(document.getElementById('nm-'+cssId(store))?.value);
+  const ns=parseInt(document.getElementById('ns-'+cssId(store))?.value),dl=parseInt(document.getElementById('dl-'+cssId(store))?.value),nm=parseInt(document.getElementById('nm-'+cssId(store))?.value),ntRaw=document.getElementById('nt-'+cssId(store))?.value.trim(),nt=ntRaw?parseInt(ntRaw):null;
   const msg=(m,c)=>{const el=document.getElementById('alerts-msg');el.textContent=m;el.style.color=c;setTimeout(()=>{if(el.textContent===m)el.textContent='';},4000);};
-  if(!(ns>=1&&ns<=120&&dl>=1&&dl<=120&&nm>=1&&nm<=120)){msg('Use whole numbers between 1 and 120.','#ff3b30');return;}
-  const{error}=await sb.from('stores').upsert({store_name:store,alert_not_shipped_days:ns,alert_delayed_days:dl,alert_not_moving_days:nm},{onConflict:'store_name'});
+  if(!(ns>=1&&ns<=120&&dl>=1&&dl<=120&&nm>=1&&nm<=120&&(nt===null||nt>=1&&nt<=120))){msg('Use whole numbers between 1 and 120.','#ff3b30');return;}
+  const{error}=await sb.from('stores').upsert({store_name:store,alert_not_shipped_days:ns,alert_delayed_days:dl,alert_not_moving_days:nm,alert_no_tracking_days:nt},{onConflict:'store_name'});
   if(error){msg('Save failed: '+error.message,'#ff3b30');return;}
-  thrCache[store]={ns,dl,nm};
+  thrCache[store]={ns,dl,nm,nt};
   msg(`Saved for ${store}.`,'#34c759');
   renderSections();renderTable();
 }
@@ -1171,9 +1198,9 @@ let sheetCache = {}; // store_name -> sheet_url (web-app van de Google Sheet van
 
 async function loadStores(){
   if(!sb)return;
-  const{data}=await sb.from('stores').select('store_name,slack_webhook_url,sheet_url,alert_not_shipped_days,alert_delayed_days,alert_not_moving_days,switch_from_order,switch_slack_webhook,switch_perf_webhook');
+  const{data}=await sb.from('stores').select('store_name,slack_webhook_url,sheet_url,alert_not_shipped_days,alert_delayed_days,alert_not_moving_days,alert_no_tracking_days,switch_from_order,switch_slack_webhook,switch_perf_webhook');
   storesCache={};thrCache={};sheetCache={};switchCache={};
-  (data||[]).forEach(r=>{ storesCache[r.store_name]=r.slack_webhook_url||''; sheetCache[r.store_name]=r.sheet_url||''; switchCache[r.store_name]={from:r.switch_from_order||'',slack:r.switch_slack_webhook||'',perf:r.switch_perf_webhook||''}; thrCache[r.store_name]={ns:r.alert_not_shipped_days||5,dl:r.alert_delayed_days||15,nm:r.alert_not_moving_days||5}; });
+  (data||[]).forEach(r=>{ storesCache[r.store_name]=r.slack_webhook_url||''; sheetCache[r.store_name]=r.sheet_url||''; switchCache[r.store_name]={from:r.switch_from_order||'',slack:r.switch_slack_webhook||'',perf:r.switch_perf_webhook||''}; thrCache[r.store_name]={ns:r.alert_not_shipped_days||5,dl:r.alert_delayed_days||15,nm:r.alert_not_moving_days||5,nt:r.alert_no_tracking_days??null}; });
 }
 
 async function saveStoreWebhook(store_name, slack_webhook_url){
@@ -1317,22 +1344,44 @@ async function saveSheetLink(store){
   showSlackMsg(url?'Sheet gekoppeld.':'Sheet-link verwijderd.','#34c759');
 }
 
-// Voorbeelden voor de sheet: zelfde orders als de Slack-voorbeelden, via dezelfde weg als echte meldingen (doPost).
-// De twee pickup-meldingen gaan over dezelfde order: één regel, de eerste melding schuift naar Previous Alert.
-// #TEST-nummers, zodat Delete test rows / Setup in de sheet ze weghaalt.
+// Voorbeelden voor de sheet, via dezelfde weg als echte meldingen (doPost): elke tab een paar regels, en alle verhuizingen komen langs.
+// #TEST-nummers, zodat Delete test rows / Setup in de sheet ze weghaalt; een nieuwe test vervangt de vorige #TESTWEB-regels.
 function sheetExamples(store){
-  const t=thr(store),ago=n=>new Date(Date.now()-n*86400000).toISOString(),slug=store.toLowerCase().replace(/[^a-z0-9]/g,'');
-  const row=(n,tab,alert,customer,tracking,age,status,checkpoint,extra={})=>({source:'shipping-monitor',tab,alert,alert_date:ago(0),order:'#TESTWEB'+n,order_date:ago(age+1),ship_date:ago(age),
-    customer,email:customer.toLowerCase().replace(' ','.')+'@example.com',tracking,tracking_link:'https://t.17track.net/en#nums='+tracking,carrier:'DHL',product:'x1 Example product ('+slug+')',reason:'',prev_reason:'',checkpoint,status,...extra});
+  const t=thr(store),nt=t.nt||3,ago=n=>new Date(Date.now()-n*86400000).toISOString();
+  const NAMES=['Jane Smith','Olivia Turner','Mary Johnson','Susan Williams','Grace Hughes','Laura Fisher','Emma Clarke','Daniel Moore','Anna Becker','Peter Novak','Sophie Martin','Lucas Meyer'],CAR=['DHL','UPS','GLS','DPD'],PROD=['Example product','Example set','Example jacket'];
+  const who=n=>({order:'#TESTWEB'+n,customer:NAMES[n%12],email:NAMES[n%12].toLowerCase().replace(' ','.')+'@example.com',product:`x${n%4===0?2:1} ${PROD[n%3]}`});
+  const trk=n=>'YTTEST'+String(100000+n),link=n=>'https://t.17track.net/en#nums='+trk(n);
+  const row=(n,tab,alert,age,status,checkpoint,extra={})=>({tab,alert,alert_date:ago(0),...who(n),order_date:ago(age+1),ship_date:ago(age),tracking:trk(n),tracking_link:link(n),carrier:CAR[n%4],reason:'',prev_reason:'',checkpoint,status,...extra});
+  const st=(n,status,checkpoint,extra={})=>({type:'status',order:'#TESTWEB'+n,tracking:trk(n),status,checkpoint,...extra});
+  const IR=`⏳ Info Received — not shipped ${t.ns}+ days`,NM=`⏸️ Not moving — no scan ${t.nm}+ days`,DL=`🐌 Delayed — in transit ${t.dl}+ days`,EX='⚠️ Exception',FA='🚪 Delivery attempt failed — email customer',RP='📍 Ready for pickup — email customer';
+  const ex=(n,reason,age)=>row(n,'Exception',EX,age,'Exception',reason,{reason}),fa=(n,reason)=>row(n,'Failed attempt',FA,11,'Failed attempt',reason,{reason}),rp=(n,alert=RP)=>row(n,'Pickup point',alert,9,'Ready for pickup','Available for pickup');
+  const pf=(back,verdict,ontime,clean,processing,wait,transit,delivered,stuck,notes,supplier='')=>{const d=n=>new Date(Date.now()-n*86400000).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+    return {type:'performance',date:ago(back),report:'Week [EXAMPLE]',period:`${d(back+7)} – ${d(back+1)}`,supplier,verdict,ontime,clean,total:Math.round((processing+wait+transit)*10)/10,processing,wait,transit,delivered,stuck,notes};};
   return [
-    row(1,'Info Received',`⏳ Info Received — not shipped ${t.ns}+ days`,'Jane Smith','YT2609100704258978',t.ns,'Info received','Shipping information received'),
-    row(2,'Not moving',`⏸️ Not moving — no scan ${t.nm}+ days`,'Olivia Turner','YT2609100704258983',t.nm+3,'In transit','Departed from facility',{last_scan:ago(t.nm)}),
-    row(3,'Delayed',`🐌 Delayed — in transit ${t.dl}+ days`,'Mary Johnson','YT2609100704258979',t.dl,'In transit','Arrived at facility'),
-    row(4,'Exception','⚠️ Exception','Susan Williams','YT2609100704258980',8,'Exception','Address issue',{reason:'Address issue'}),
-    row(5,'Exception','⚠️ Exception','Grace Hughes','YT2609100704258984',12,'Exception','Returned to sender',{reason:'Returned to sender'}),
-    row(7,'Failed attempt','🚪 Delivery attempt failed — email customer','Laura Fisher','YT2609100704258982',11,'Failed attempt','Recipient not available',{reason:'Recipient not available'}),
-    row(6,'Pickup point','📍 Ready for pickup — email customer','Emma Clarke','YT2609100704258981',9,'Ready for pickup','Ready for pickup'),
-    row(6,'Pickup point','📍 Not picked up after 72+ hours — email customer again','Emma Clarke','YT2609100704258981',9,'Ready for pickup','Ready for pickup'),
+    // Zonder tracking link: 4 blijven staan, 1 krijgt een nummer en 1 is geannuleerd (→ Solved)
+    {type:'no_tracking',items:[1,2,3,4,5,6].map(n=>({alert:`🔗 No tracking link — ${nt}+ days after order`,alert_date:ago(0),...who(n),order_date:ago(nt+n%3),status:'No tracking link'}))},
+    {type:'no_tracking_done',order:'#TESTWEB5',status:'Tracking added',tracking:trk(5),tracking_link:link(5)},
+    {type:'no_tracking_done',order:'#TESTWEB6',status:'Cancelled'},
+    ...[7,8,9,10].map(n=>row(n,'Info Received',IR,t.ns+n%3,'Info received','Shipping information received')),
+    ...[11,12,13,14].map((n,i)=>row(n,'Not moving',NM,t.nm+3+i,'In transit',['Departed from facility','Arrived at sorting center','Handed over to airline','Arrived at destination country'][i],{last_scan:ago(t.nm+i)})),
+    ...[15,16,17].map((n,i)=>row(n,'Delayed',DL,t.dl+i,'In transit',['Arrived at facility','Customs clearance in progress','Delayed at transit hub'][i],{reason:['','Customs clearance delay','Carrier delay'][i]})),
+    row(18,'Delayed',`🐌 Still not delivered — ${t.dl*2}+ days`,t.dl*2,'In transit','Awaiting customs clearance'),
+    ex(19,'Address issue',8),ex(20,'Damaged',9),ex(21,'Lost',14),ex(22,'Held at customs',10),
+    // Reden veranderd: eerst Delivery exception, daarna Held at customs (Previous Reason)
+    ex(23,'Delivery exception',9),row(23,'Exception','Reason changed',9,'Exception','Held by customs',{reason:'Held at customs',prev_reason:'Delivery exception'}),
+    // Retour → RTC: één meteen, één vanuit Exception, één door de laatste scan vanuit Delayed
+    ex(24,'Returned to sender',12),ex(25,'Address issue',13),row(25,'Exception','Reason changed',13,'Exception','Returning to sender',{reason:'Returned to sender',prev_reason:'Address issue'}),
+    row(26,'Delayed',DL,t.dl+4,'In transit','Arrived at facility'),st(26,'In transit','Returning to sender',{returned:true}),
+    fa(27,'Recipient not available'),fa(28,'Failed attempt'),row(28,'Failed attempt','🚪 Delivery failed again — email customer again',12,'Failed attempt','Second delivery attempt failed',{reason:'Recipient not available'}),
+    row(29,'Failed attempt','🚪 Delivery attempt failed — keep an eye on it',11,'Failed attempt','Delivery postponed',{reason:'Weather delay'}),
+    rp(30),rp(31),rp(31,'📍 Not picked up after 72+ hours — email customer again'),
+    // Eerst mislukte bezorging, daarna afhaalpunt: de regel verhuist
+    fa(32,'Recipient not available'),rp(32),
+    // Bezorgd → Solved
+    row(33,'Delayed',DL,t.dl+2,'In transit','Arrived at facility'),st(33,'Delivered','Delivered'),row(34,'Not moving',NM,t.nm+4,'In transit','Departed from facility',{last_scan:ago(t.nm)}),st(34,'Delivered','Delivered'),rp(35),st(35,'Delivered','Picked up by customer'),
+    pf(14,'🔴 Below goal — on time below goal',64,96,1.4,2.1,13.2,88,7,'• Late orders: 15.1 days in transit on average (on-time orders: 9.2 days)'),
+    pf(7,'🟡 Close to goal — on time just below goal',76,95,1.1,1.6,11.4,94,5,'• On time up from 64% to 76% compared to last week'),
+    pf(0,'🟢 On goal — all goals met',88,97,0.9,1.2,10.1,102,2,'• On time back on goal (Last week: 76%)'),
   ];
 }
 // text/plain: anders blokkeert de browser het verzoek naar Google. Pas goed als het sheet-script zelf ok antwoordt.
@@ -1348,7 +1397,7 @@ async function testWebhook(store){
   if(!url)out.push('Slack: geen link');
   else{
     showSlackMsg('Testberichten naar Slack...','#86868b',60000);
-    try{await testSlack(store,url);out.push('Slack: ✓ 8 berichten'+notSaved(url,storesCache[store]));}
+    try{const n=await testSlack(store,url);out.push(`Slack: ✓ ${n} berichten`+notSaved(url,storesCache[store]));}
     catch(e){ok=false;out.push('Slack: ✗ '+e.message);}
   }
   if(!sheet)out.push('Sheet: geen link');
@@ -1356,32 +1405,44 @@ async function testWebhook(store){
   else{
     const rows=sheetExamples(store);
     try{
-      for(let i=0;i<rows.length;i++){showSlackMsg(`Testregels naar de sheet (${i+1}/${rows.length})...`,'#86868b',60000);await sendSheet(sheet,rows[i]);}
-      out.push(`Sheet: ✓ ${rows.length} meldingen op ${new Set(rows.map(r=>r.order)).size} regels`+notSaved(sheet,sheetCache[store]));
+      const part=12;
+      showSlackMsg('Oude testregels weghalen...','#86868b',60000);
+      await sendSheet(sheet,{source:'shipping-monitor',type:'reset_test'});
+      for(let i=0;i<rows.length;i+=part){showSlackMsg(`Testregels naar de sheet (${Math.min(i+part,rows.length)}/${rows.length})...`,'#86868b',120000);await sendSheet(sheet,{source:'shipping-monitor',type:'batch',items:rows.slice(i,i+part)});}
+      out.push('Sheet: ✓ alle tabs gevuld'+notSaved(sheet,sheetCache[store]));
     }catch(e){ok=false;out.push('Sheet: ✗ '+e.message);}
   }
   showSlackMsg(out.join(' · '),!ok?'#ff3b30':'#34c759',60000);
 }
 async function testSlack(store,url){
+    let n=0;const send=async(b,txt)=>{if(n)await new Promise(r=>setTimeout(r,1000));await sendSlack(url,b,txt);n++;showSlackMsg(`Testberichten naar Slack (${n})...`,'#86868b',60000);};
     const today=new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'}).replace(/\//g,'/');
     const t=thr(store);
-    await sendSlack(url,buildBlocks('⏳ Shipment Stuck — Label Created, Not Shipped [EXAMPLE]',store,'#TESTWEB1','Jane Smith','jane.smith@email.com','YT2609100704258978',today,`This shipment has been on "Info Received" status for ${t.ns}+ days. Why has this order not been shipped yet? Please provide an update. 🙏`),'⏳ Label Not Shipped [EXAMPLE]');
+    await send(buildBlocks('⏳ Shipment Stuck — Label Created, Not Shipped [EXAMPLE]',store,'#TESTWEB1','Jane Smith','jane.smith@email.com','YT2609100704258978',today,`This shipment has been on "Info Received" status for ${t.ns}+ days. Why has this order not been shipped yet? Please provide an update. 🙏`),'⏳ Label Not Shipped [EXAMPLE]');
     const nmb=buildBlocks(`⏸️ Shipment Not Moving — No Tracking Update ${t.nm}+ Days [EXAMPLE]`,store,'#TESTWEB2','Olivia Turner','','YT2609100704258983','',`This shipment has had no tracking update for ${t.nm}+ days. Please provide an update. 🙏`),nmf=nmb[2].fields;
     nmb[2].fields=[nmf[0],nmf[1],nmf[2],nmf[5],{type:'mrkdwn',text:`*Last scan:*\n${new Date(Date.now()-t.nm*86400000).toLocaleDateString('en-GB')}\nDeparted from facility`},{type:'mrkdwn',text:'*Carrier:*\nDHL'}];
-    await sendSlack(url,nmb,'⏸️ Not Moving [EXAMPLE]');
-    await sendSlack(url,buildBlocks(`🐌 Shipment Delayed — In Transit ${t.dl}+ Days [EXAMPLE]`,store,'#TESTWEB3','Mary Johnson','mary.johnson@email.com','YT2609100704258979',today,`This shipment has been in transit for ${t.dl}+ days without delivery. Why has this order not been delivered yet? Please provide an update. 🙏`),'🐌 Delayed In Transit [EXAMPLE]');
-    await sendSlack(url,buildBlocks('⚠️ Shipment Exception — Action Required [EXAMPLE]',store,'#TESTWEB4','Susan Williams','susan.williams@email.com','YT2609100704258980',today,'This shipment has an exception status. Please investigate and provide an update. 🙏'),'⚠️ Exception [EXAMPLE]');
+    await send(nmb,'⏸️ Not Moving [EXAMPLE]');
+    await send(buildBlocks(`🐌 Shipment Delayed — In Transit ${t.dl}+ Days [EXAMPLE]`,store,'#TESTWEB3','Mary Johnson','mary.johnson@email.com','YT2609100704258979',today,`This shipment has been in transit for ${t.dl}+ days without delivery. Why has this order not been delivered yet? Please provide an update. 🙏`),'🐌 Delayed In Transit [EXAMPLE]');
+    await send(buildBlocks('⚠️ Shipment Exception — Action Required [EXAMPLE]',store,'#TESTWEB4','Susan Williams','susan.williams@email.com','YT2609100704258980',today,'This shipment has an exception status. Please investigate and provide an update. 🙏'),'⚠️ Exception [EXAMPLE]');
     const rb=buildBlocks('↩️ Shipment Returning to Sender [EXAMPLE]',store,'#TESTWEB5','Grace Hughes','grace.hughes@email.com','YT2609100704258984',today,'Please provide an update on this return. 🙏');
     rb[2].fields.push({type:'mrkdwn',text:'*Reason:*\nReturned to sender'},{type:'mrkdwn',text:'*Carrier:*\nDHL'});
-    await sendSlack(url,rb,'↩️ Returning to Sender [EXAMPLE]');
+    await send(rb,'↩️ Returning to Sender [EXAMPLE]');
     const fb=buildBlocks('🚪 Delivery Attempt Failed [EXAMPLE]',store,'#TESTWEB7','Laura Fisher','','YT2609100704258982','','Please email the customer to arrange a new delivery. 🙏'),ff=fb[2].fields;
     fb[2].fields=[ff[0],ff[1],ff[2],ff[5],{type:'mrkdwn',text:'*Reason:*\nRecipient not available'},{type:'mrkdwn',text:`*Failed on:*\n${today}`},{type:'mrkdwn',text:'*Carrier:*\nDHL'}];
-    await sendSlack(url,fb,'🚪 Delivery Attempt Failed [EXAMPLE]');
+    await send(fb,'🚪 Delivery Attempt Failed [EXAMPLE]');
     // Zelfde velden als de echte pickup-meldingen uit de webhook-functie
     const pickup=(header,order,customer,tracking,since,ask)=>{const b=buildBlocks(header,store,order,customer,'',tracking,'',ask);const f=b[2].fields;b[2].fields=[f[0],f[1],f[2],f[5],{type:'mrkdwn',text:`*At pickup point since:*\n${since}`},{type:'mrkdwn',text:'*Carrier:*\nDHL'}];return b;};
     const ago3=new Date(Date.now()-3*86400000).toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'});
-    await sendSlack(url,pickup('📍 Shipment Ready for Pickup [EXAMPLE]','#TESTWEB6','Emma Clarke','YT2609100704258981',today,'Please email the customer to pick up this parcel as soon as possible. 🙏'),'📍 Ready for Pickup [EXAMPLE]');
-    await sendSlack(url,pickup('📍 Shipment Still Not Picked Up — 72+ Hours [EXAMPLE]','#TESTWEB6','Emma Clarke','YT2609100704258981',ago3,'This parcel has not been picked up yet. Please email the customer again. 🙏'),'📍 Still Not Picked Up [EXAMPLE]');
+    await send(pickup('📍 Shipment Ready for Pickup [EXAMPLE]','#TESTWEB6','Emma Clarke','YT2609100704258981',today,'Please email the customer to pick up this parcel as soon as possible. 🙏'),'📍 Ready for Pickup [EXAMPLE]');
+    await send(pickup('📍 Shipment Still Not Picked Up — 72+ Hours [EXAMPLE]','#TESTWEB6','Emma Clarke','YT2609100704258981',ago3,'This parcel has not been picked up yet. Please email the customer again. 🙏'),'📍 Still Not Picked Up [EXAMPLE]');
+    const mk=(header,fields,...texts)=>[{type:'divider'},{type:'section',text:{type:'mrkdwn',text:`*${header} [EXAMPLE]*`}},{type:'section',fields:fields.map(([a,b])=>({type:'mrkdwn',text:`*${a}:*\n${b}`}))},...texts.map(x=>({type:'section',text:{type:'mrkdwn',text:x}})),{type:'divider'}];
+    const trk=x=>`${x}\n<https://t.17track.net/en#nums=${x}|17track>`,base=(o,c,x)=>[['Store',store],['Order',o],['Customer',c],['Tracking',trk(x)]],dm=d=>new Date(Date.now()-d*86400000).toLocaleDateString('en-GB'),nt=t.nt||3;
+    await send(mk(`🐌 Shipment Still Not Delivered — ${t.dl*2}+ Days`,[...base('#TESTWEB18','Emma Clarke','YTTEST100018'),['Shipped',dm(t.dl*2)],['Delayed alert sent',dm(t.dl)]],'This shipment has still not been delivered. Please provide an update. 🙏'),'🐌 Still Not Delivered [EXAMPLE]');
+    await send(mk('🔄 Shipment Update — Exception Changed',[...base('#TESTWEB23','Lucas Meyer','YTTEST100023'),['Before','Delivery exception'],['Now','Held at customs']],'The exception status of this shipment has changed. Please provide an update. 🙏'),'🔄 Exception Changed [EXAMPLE]');
+    await send(mk('🚪 Delivery Attempt Failed Again',[...base('#TESTWEB28','Grace Hughes','YTTEST100028'),['Reason','Recipient not available'],['Failed on',today],['Carrier','DHL']],'Please email the customer again to arrange a new delivery. 🙏'),'🚪 Failed Again [EXAMPLE]');
+    await send(mk(`🔗 Orders Without Tracking Link — ${nt}+ Days`,[['Store',store],['New today','4'],['Still open from earlier','2'],['Details','Sheet, tab No tracking']],[1,2,3,4].map(i=>`• #TESTWEB${i} — ordered ${dm(nt+i%3)}`).join('\n'),'These orders have no tracking link yet. Please ship them and add the tracking links. 🙏'),'🔗 No Tracking Link [EXAMPLE]');
+    await send(mk('🔌 Shopify Connection Stopped',[['Store',store],['Last order received',dm(2)]],'New orders no longer come in from Shopify, so missing tracking links are not checked. Please check the Shopify webhooks. 🙏'),'🔌 Shopify Connection Stopped [EXAMPLE]');
+    return n;
 }
 
 function showSlackMsg(msg,color,ms=4000){
