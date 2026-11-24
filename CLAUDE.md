@@ -328,3 +328,10 @@ Ideas for later (not started):
 - Sheet: `fromFailed_` verhuist de regel naar Exception/Pickup point (gesprek mee); retour → RTC, Delivered → Solved.
 - Dashboard: lege blokken hebben een grijs bolletje. Testknop: 8 Slack-berichten, 8 meldingen op 7 regels.
 - Nog niet met een echt pakket gezien.
+
+## Supplier-switch (2026-11-24, webhook v33, perf-check v22, sheet @60)
+- `stores.switch_from_order / switch_slack_webhook / switch_perf_webhook`. Actief als order + nieuwe Slack-link gevuld zijn; leeg = gedrag als voorheen. Invullen: Manage stores → Slack → "Switch to new supplier".
+- Orders vanaf dat nummer → nieuwe Slack; daarvoor → `slack_webhook_url` (blijft tot ze klaar zijn). Zelfde functies `orderParts`/`isNewSupplier` in webhook, perf-check en index.html (voorvoegsel moet kloppen als het ingevuld is; onleesbaar nummer = oude supplier). Kanaal wordt pas bij het versturen bepaald (ook in de wachtrij).
+- perf-check: twee rapporten (oude orders → `perf_webhook`, nieuwe → `switch_perf_webhook`), log-key krijgt `|new`. Dashboard: keuze All / Old / New supplier in Supplier Performance, alleen zichtbaar bij een actieve switch.
+- Eén sheet per winkel (keuze merchant); geen Supplier-kolom.
+- Volgende wissel (B → C): links van B naar de gewone velden, dan de switch leegmaken/opnieuw invullen.

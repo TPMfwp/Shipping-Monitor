@@ -173,7 +173,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
   <div id="perf-block" style="background:white;border-radius:14px;border:1px solid rgba(0,0,0,0.06);padding:1.1rem 1.25rem;margin-bottom:1rem;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.9rem;">
       <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#86868b;">Supplier Performance</div>
-      <div style="display:flex;align-items:center;gap:10px;">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
+        <div id="perf-sup" style="display:none;gap:2px;background:#f2f2f7;border-radius:8px;padding:2px;"></div>
         <div id="perf-period" style="display:flex;gap:2px;background:#f2f2f7;border-radius:8px;padding:2px;"></div>
         <button id="perf-settings-btn" onclick="togglePerfSettings()" style="font-size:11px;color:#0071e3;background:none;border:none;cursor:pointer;font-weight:500;">Settings</button>
       </div>
@@ -1105,6 +1106,8 @@ function loadPerfSettingsUI(){
 const PERF_MIN=20, PERF_LAG=14, PROBLEM_ST=['EXCEPTION','EXPIRED','FAILED_ATTEMPT'];
 // Start altijd op All: bij een stille store zijn 7/30/90 dagen leeg en lijkt het alsof er iets mis is
 let perfPeriod='all';
+let perfSup='all';   // all / old / new, alleen zichtbaar als de winkel een supplier-switch heeft
+function setPerfSup(p){perfSup=p;renderPerformance();}
 function setPerfPeriod(p){perfPeriod=p;renderPerformance();}
 const perfMean=xs=>xs.length?Math.round(xs.reduce((a,b)=>a+b,0)/xs.length):null;
 const perfIn=(d,from,to)=>{if(!d)return false;const t=new Date(d).getTime();return t>=from&&t<to;};
@@ -1125,7 +1128,11 @@ function perfProblems(data,probIds,from,to){
 
 function renderPerformance(){
   const store=curStore;
-  const data=store==='all'?all:all.filter(d=>d.store_name===store);
+  const sw=store!=='all'&&switchOn(store),sup=sw?perfSup:'all';
+  const data=store==='all'?all:all.filter(d=>d.store_name===store&&(sup==='all'||isNewSupplier(store,d.order_number)===(sup==='new')));
+  const supEl=document.getElementById('perf-sup');
+  supEl.style.display=sw?'flex':'none';
+  supEl.innerHTML=sw?[['all','All'],['old','Old supplier'],['new','New supplier']].map(([k,l])=>`<button class="pper${sup===k?' active':''}" onclick="setPerfSup('${k}')">${l}</button>`).join(''):'';
   const settingsBtn=document.getElementById('perf-settings-btn');
   if(settingsBtn)settingsBtn.style.display=store==='all'?'none':'block';
   document.getElementById('perf-period').innerHTML=[['7','7d'],['30','30d'],['90','90d'],['all','All']].map(([k,l])=>`<button class="pper${perfPeriod===k?' active':''}" onclick="setPerfPeriod('${k}')">${l}</button>`).join('');
@@ -1159,13 +1166,14 @@ function renderPerformance(){
 // ── Slack integration ────────────────────────────────────────────────────────
 
 let storesCache = {}; // store_name -> slack_webhook_url
+let switchCache = {}; // store_name -> {from,slack,perf}: supplier-switch (leeg = niet gewisseld)
 let sheetCache = {}; // store_name -> sheet_url (web-app van de Google Sheet van de winkel)
 
 async function loadStores(){
   if(!sb)return;
-  const{data}=await sb.from('stores').select('store_name,slack_webhook_url,sheet_url,alert_not_shipped_days,alert_delayed_days,alert_not_moving_days');
-  storesCache={};thrCache={};sheetCache={};
-  (data||[]).forEach(r=>{ storesCache[r.store_name]=r.slack_webhook_url||''; sheetCache[r.store_name]=r.sheet_url||''; thrCache[r.store_name]={ns:r.alert_not_shipped_days||5,dl:r.alert_delayed_days||15,nm:r.alert_not_moving_days||5}; });
+  const{data}=await sb.from('stores').select('store_name,slack_webhook_url,sheet_url,alert_not_shipped_days,alert_delayed_days,alert_not_moving_days,switch_from_order,switch_slack_webhook,switch_perf_webhook');
+  storesCache={};thrCache={};sheetCache={};switchCache={};
+  (data||[]).forEach(r=>{ storesCache[r.store_name]=r.slack_webhook_url||''; sheetCache[r.store_name]=r.sheet_url||''; switchCache[r.store_name]={from:r.switch_from_order||'',slack:r.switch_slack_webhook||'',perf:r.switch_perf_webhook||''}; thrCache[r.store_name]={ns:r.alert_not_shipped_days||5,dl:r.alert_delayed_days||15,nm:r.alert_not_moving_days||5}; });
 }
 
 async function saveStoreWebhook(store_name, slack_webhook_url){
@@ -1226,7 +1234,61 @@ async function renderSlackSettings(){
           style="flex:1;border:1px solid #d2d2d7;border-radius:8px;padding:7px 10px;font-size:11px;font-family:monospace;outline:none;color:#1d1d1f;">
         <button onclick="saveSheetLink(${jsq(s)})" style="padding:7px 12px;border-radius:8px;border:none;background:#0071e3;color:white;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;">Save</button>
       </div>
+      ${switchBlock(s)}
     </div>`).join('');
+}
+
+// ── Supplier-switch: vanaf een ordernummer gaan de Slack-berichten naar een ander kanaal (zelfde regels als webhook + perf-check) ──
+const orderParts=v=>{const m=/^\s*#?([^\d]*)(\d+)/.exec(String(v??''));return m?{p:m[1].trim().toUpperCase(),n:Number(m[2])}:null;};
+const switchOn=store=>{const w=switchCache[store];return !!(w&&w.slack&&orderParts(w.from));};
+function isNewSupplier(store,order){const w=switchCache[store]||{},f=orderParts(w.from),o=orderParts(order);return !!(w.slack&&f&&o&&(!f.p||f.p===o.p)&&o.n>=f.n);}
+const isHook=u=>/^https:\/\/hooks\.slack\.com\/\S+$/.test(u);
+function switchText(v){const f=orderParts(v);if(!v.trim())return 'Empty = no switch, everything stays with the current supplier.';
+  if(!f)return 'Enter an order number.';const no=`#${f.p}${f.n}`;return `Before ${no}: current supplier. From ${no}: new supplier.`;}
+function switchBlock(s){
+  const w=switchCache[s]||{from:'',slack:'',perf:''},id=cssId(s),on=switchOn(s);
+  const inp='width:100%;border:1px solid #d2d2d7;border-radius:8px;padding:7px 10px;font-size:11px;font-family:monospace;outline:none;color:#1d1d1f;background:white;';
+  const lab=t=>`<div style="font-size:11px;color:#86868b;margin:8px 0 4px;">${t}</div>`;
+  return `<details ${on?'open':''} style="margin-top:12px;border:1px solid ${on?'#0071e3':'#e5e5ea'};border-radius:10px;padding:10px 12px;background:#f9f9fb;">
+        <summary style="cursor:pointer;font-size:12px;font-weight:600;color:#1d1d1f;">Switch to new supplier <span style="font-weight:500;color:${on?'#0071e3':'#86868b'};">${on?'· On':'· Off'}</span></summary>
+        ${lab('From order #')}
+        <input id="sf-${id}" placeholder="#1501" value="${esc(w.from)}" oninput="document.getElementById('st-${id}').textContent=switchText(this.value)" style="${inp}">
+        <div id="st-${id}" style="font-size:11px;color:#1d1d1f;margin-top:4px;">${esc(switchText(w.from))}</div>
+        ${lab('New supplier — Slack webhook (alerts)')}
+        <input id="sw-${id}" type="url" placeholder="https://hooks.slack.com/services/..." value="${esc(w.slack)}" style="${inp}">
+        ${lab('New supplier — Slack webhook (performance, optional)')}
+        <input id="sp-${id}" type="url" placeholder="https://hooks.slack.com/services/..." value="${esc(w.perf)}" style="${inp}">
+        <div style="display:flex;gap:6px;margin-top:10px;">
+          <button onclick="saveSwitch(${jsq(s)})" style="padding:7px 12px;border-radius:8px;border:none;background:#0071e3;color:white;font-size:12px;font-weight:500;cursor:pointer;">Save</button>
+          <button onclick="testSwitch(${jsq(s)})" style="padding:7px 12px;border-radius:8px;border:1px solid #d2d2d7;background:white;color:#1d1d1f;font-size:12px;cursor:pointer;">Test</button>
+        </div>
+      </details>`;
+}
+const switchVals=store=>{const v=k=>document.getElementById(k+'-'+cssId(store))?.value?.trim()||'';return {from:v('sf'),slack:v('sw'),perf:v('sp')};};
+async function saveSwitch(store){
+  if(!sb)return;
+  const w=switchVals(store),bad=m=>showSlackMsg(m,'#ff3b30',8000);
+  if(w.slack&&!isHook(w.slack)||w.perf&&!isHook(w.perf))return bad('A Slack link must start with https://hooks.slack.com/');
+  if(w.from&&!orderParts(w.from))return bad('Enter an order number.');
+  if(!!w.from!==!!w.slack)return bad(w.from?'Add the new Slack link for alerts too.':'Enter the first order number of the new supplier.');
+  const{error}=await sb.from('stores').upsert({store_name:store,switch_from_order:w.from||null,switch_slack_webhook:w.slack||null,switch_perf_webhook:w.perf||null},{onConflict:'store_name'});
+  if(error)return bad('Save failed: '+error.message);
+  switchCache[store]=w;
+  await renderSlackSettings();
+  renderPerformance();
+  showSlackMsg(w.from?'Saved. '+switchText(w.from):'Saved. No switch.','#34c759',8000);
+}
+// Eén kort bericht per nieuw kanaal, om te zien of de link klopt
+async function testSwitch(store){
+  const w=switchVals(store),links=[['alerts',w.slack],['performance',w.perf]].filter(x=>x[1]);
+  if(!links.length)return showSlackMsg('No new Slack link filled in.','#ff3b30');
+  const out=[];let ok=true;
+  for(const[k,u]of links){
+    try{if(!isHook(u))throw new Error('link must start with https://hooks.slack.com/');
+      await sendSlack(u,[{type:'section',text:{type:'mrkdwn',text:`*✅ Test — Shipping Monitor*\n\n${store}: this channel is set for ${k} of the new supplier.`}}],'Test — Shipping Monitor');out.push(`${k}: ✓`);}
+    catch(e){ok=false;out.push(`${k}: ✗ ${e.message}`);}
+  }
+  showSlackMsg(out.join(' · '),ok?'#34c759':'#ff3b30',20000);
 }
 
 function cssId(s){return s.replace(/[^a-zA-Z0-9]/g,'_');}
