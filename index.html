@@ -849,7 +849,7 @@ async function renderAlertSettings(){
   el.innerHTML=stores.map(s=>{const t=thr(s);return `
     <div style="border:1px solid #e5e5ea;border-radius:10px;padding:12px 14px;margin-bottom:10px;">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px;">
-        <div style="font-size:12px;font-weight:600;color:#1d1d1f;">${esc(s)}</div>
+        <div style="font-size:12px;font-weight:600;color:#1d1d1f;">${esc(s)}${shopDot(s)}</div>
         <button onclick="saveAlertDays(${jsq(s)})" style="padding:7px 12px;border-radius:8px;border:none;background:#0071e3;color:white;font-size:12px;font-weight:500;cursor:pointer;">Save</button>
       </div>
       ${[['nt','No tracking link','Order has no link yet. Empty = off.',t.nt],['ns','Not shipped','Link exists, parcel not handed over yet.',t.ns],['nm','Not moving','On its way, but no new scan.',t.nm],['dl','Delayed','On its way too long.',t.dl]].map(([k,l,hint,v])=>`
@@ -861,25 +861,38 @@ async function renderAlertSettings(){
     </div>`;}).join('');
 }
 
-// Shopify-koppeling: nodig voor de melding 'No tracking link'. Status komt uit de laatst ontvangen order.
-let shopToken='',shopLast={};
+// Shopify-koppeling: nodig voor de melding 'No tracking link'. Status komt uit de laatst ontvangen order of testmelding.
+let shopToken='',shopLast={},shopTest={};
 async function loadShop(){
   const stores=[...new Set(all.map(d=>d.store_name).filter(Boolean))];
-  const[tok,...last]=await Promise.all([sb.from('app_settings').select('value').eq('key','webhook_token').single(),
+  const[tok,tests,...last]=await Promise.all([sb.from('app_settings').select('value').eq('key','webhook_token').single(),sb.from('stores').select('store_name,shop_test_create_at,shop_test_cancel_at'),
     ...stores.map(s=>sb.from('shop_orders').select('received_at').eq('store_name',s).order('received_at',{ascending:false}).limit(1).maybeSingle())]);
-  shopToken=tok.data?.value||'';shopLast={};
+  shopToken=tok.data?.value||'';shopLast={};shopTest={};
+  (tests.data||[]).forEach(r=>{shopTest[r.store_name]={create:r.shop_test_create_at,cancel:r.shop_test_cancel_at};});
   stores.forEach((s,i)=>{shopLast[s]=last[i].data?.received_at||null;});
 }
 const shopUrl=s=>shopToken?`${SUPABASE_URL}/functions/v1/shopify-orders?store=${encodeURIComponent(s)}&token=${shopToken}`:'';
+function shopState(s){
+  const t=shopTest[s]||{};
+  if(shopLast[s])return{text:'Connected',dot:'#34c759',color:'#1a7a3a'};
+  if(t.create||t.cancel)return{text:'Test received',dot:'#ffcc00',color:'#8a6100'};
+  return{text:'Not connected',dot:'#c7c7cc',color:'#86868b'};
+}
+function shopDot(s){
+  const x=shopState(s);
+  return `<span style="display:inline-flex;align-items:center;gap:5px;margin-left:8px;font-size:11px;font-weight:500;color:${x.color};"><span style="width:8px;height:8px;border-radius:50%;background:${x.dot};"></span>Shopify: ${x.text}</span>`;
+}
 function shopBlock(s){
+  const st=shopState(s),t=shopTest[s]||{},mark=ok=>ok?'<strong style="color:#1a7a3a;">✓</strong>':'not yet';
   const last=shopLast[s],step=(n,t)=>`<div class="step"><div class="step-num">${n}</div><div class="step-text">${t}</div></div>`;
-  return `<details style="margin-top:10px;border:1px solid ${last?'#34c759':'#e5e5ea'};border-radius:10px;padding:10px 12px;background:#f9f9fb;">
-        <summary style="cursor:pointer;font-size:12px;font-weight:600;color:#1d1d1f;">Connect Shopify <span style="font-weight:500;color:${last?'#1a7a3a':'#86868b'};">· ${last?'Connected':'No orders received yet'}</span></summary>
-        <div style="font-size:11px;color:#86868b;margin:6px 0 12px;line-height:1.5;">${last?`Last order received: ${new Date(last).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}.`:'Only needed for "No tracking link". Shopify then sends each new order here.'}</div>
+  return `<details style="margin-top:10px;border:1px solid ${st.text==='Not connected'?'#e5e5ea':st.dot};border-radius:10px;padding:10px 12px;background:#f9f9fb;">
+        <summary style="cursor:pointer;font-size:12px;font-weight:600;color:#1d1d1f;">Connect Shopify <span style="font-weight:500;color:${st.color};">· ${st.text}</span></summary>
+        <div style="font-size:11px;color:#86868b;margin:6px 0 12px;line-height:1.5;">${last?`Last order received: ${new Date(last).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}.`:'Only needed for "No tracking link". Shopify then sends each new order here.'}<br>Order creation: ${mark(t.create||last)} · Order cancellation: ${mark(t.cancel)}${!last&&(t.create||t.cancel)?'<br>Link works. Waiting for the first real order.':''}</div>
         ${step(1,'In Shopify: <strong>Settings → Notifications → Webhooks → Create webhook</strong>')}
         ${step(2,'Event <strong>Order creation</strong>, format <strong>JSON</strong>')}
         ${step(3,`URL: paste this link → <strong>Save</strong><br><button onclick="copyShopUrl(${jsq(s)},this)" style="margin-top:6px;padding:5px 12px;border-radius:8px;border:1px solid #d2d2d7;background:white;color:#1d1d1f;font-size:12px;cursor:pointer;">Copy link</button><div style="font-size:11px;color:#86868b;margin-top:6px;">Secret link, do not share.</div>`)}
         ${step(4,'Do the same once more with event <strong>Order cancellation</strong> (same link)')}
+        ${step(5,'Both webhooks: <strong>⋯ → Send test notification</strong>, then refresh this page')}
       </details>`;
 }
 async function copyShopUrl(store,b){
