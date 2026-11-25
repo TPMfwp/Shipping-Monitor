@@ -352,3 +352,9 @@ Ideas for later (not started):
 - Test-knop (Slack-tab): 13 Slack-berichten en alle sheet-tabs gevuld via `type:'batch'`; `reset_test` haalt eerst alleen de oude #TESTWEB-regels weg.
 - OPEN 3: alle Slack-berichten nalopen.
 - pickup_date: 0 van 698 gevuld (pas opgeslagen sinds 2026-11-16); checken bij eerste echte pakketten.
+
+### Sheet houdt volume bij (2026-11-25, webhook v34, sheet @65)
+- Ronde 1 van de mega test: sheet deed 12–14 s per bericht en 26 van 28 liepen vast. Slack en monitor waren goed.
+- Nu: Slack eerst, daarna meteen de sheet. Is het druk, dan in groepen van max 20 (`type:'batch'`, één groep tegelijk per winkel via slot `sheet|<store>`). Niets weg tot de sheet het bevestigt; `failed[]` = losse regels die opnieuw gaan.
+- @65: kolommen gelijktrekken max 1× per 10 min, opmaak 1× per tab per groep, statusupdates in één keer. Cron `alert-retry` elke minuut (stuurt alleen als er iets klaarstaat).
+- Gemeten: 14 statusupdates tegelijk = wachtrij leeg binnen 9–15 s, 2 metingen (was ~25 s). Nieuwe meldingen op volume: meten in ronde 2.
