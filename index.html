@@ -31,14 +31,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
 .perf-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
 .pper{border:none;background:transparent;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:500;color:#86868b;cursor:pointer;}
 .pper.active{background:white;color:#1d1d1f;box-shadow:0 1px 2px rgba(0,0,0,0.08);}
-.perf-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px 20px;margin-bottom:1.1rem;}
-.perf-bars{display:flex;flex-direction:column;gap:6px;width:264px;}
+.perf-top{display:grid;grid-template-columns:1fr auto;grid-template-areas:"title bars" "grid bars" "grid set";grid-template-rows:auto auto 1fr;column-gap:32px;}
+.perf-title{grid-area:title;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#86868b;margin:4px 0 0.9rem;}
+.perf-top .perf-grid{grid-area:grid;}
+.perf-bars{grid-area:bars;display:flex;flex-direction:column;gap:5px;width:230px;}
 .perf-bars>div{gap:2px;background:#f2f2f7;border-radius:8px;padding:2px;}
-.perf-bars .pper{flex:1 1 0;padding:5px 4px;white-space:nowrap;}
+.perf-bars .pper{flex:1 1 auto;padding:3px 6px;white-space:nowrap;}
+#perf-period .pper{flex:1 1 0;}
+.perf-bars .pper:last-child{flex:0 0 46px !important;}
 .pper:focus,#perf-settings-btn:focus{outline:none;}
 .pper:focus-visible,#perf-settings-btn:focus-visible{box-shadow:0 0 0 2px rgba(0,113,227,0.35);}
-#perf-settings-btn{margin-top:12px;background:#f2f2f7;border:none;border-radius:8px;padding:6px 14px;font-size:11px;font-weight:500;color:#1d1d1f;cursor:pointer;}
-@media(max-width:600px){.perf-head{flex-direction:column;}.perf-bars{width:100%;}.stats{grid-template-columns:repeat(2,1fr);}.perf-grid{grid-template-columns:repeat(2,1fr);row-gap:14px;}}
+#perf-settings-btn{grid-area:set;justify-self:end;align-self:end;margin-top:8px;font-size:11px;color:#0071e3;background:none;border:none;border-radius:4px;padding:0;cursor:pointer;font-weight:500;}
+@media(max-width:800px){.perf-top{grid-template-columns:1fr;grid-template-areas:"title" "bars" "grid" "set";grid-template-rows:none;}.perf-title{margin-bottom:8px;}.perf-bars{width:100%;margin-bottom:14px;}}
+@media(max-width:600px){.stats{grid-template-columns:repeat(2,1fr);}.perf-grid{grid-template-columns:repeat(2,1fr);row-gap:14px;}}
 .stat{background:white;border-radius:14px;padding:1.1rem 1.25rem;border:1px solid rgba(0,0,0,0.06);cursor:pointer;transition:border-color 0.15s;}
 .stat:hover{border-color:#0071e3;}
 .stat.active{border-color:#0071e3;border-width:2px;}
@@ -178,39 +183,37 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
 
   <!-- Performance block -->
   <div id="perf-block" style="background:white;border-radius:14px;border:1px solid rgba(0,0,0,0.06);padding:1.1rem 1.25rem;margin-bottom:1rem;">
-    <div class="perf-head">
-      <div style="padding-top:7px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#86868b;">Supplier Performance</div>
+    <div class="perf-top">
+      <div class="perf-title">Supplier Performance</div>
       <div class="perf-bars">
         <div id="perf-sup" style="display:none;"></div>
         <div id="perf-period" style="display:flex;"></div>
       </div>
-    </div>
-    <div class="perf-grid">
-      <div>
-        <div style="font-size:11px;color:#86868b;margin-bottom:3px;">Order to delivered</div>
-        <div id="perf-avg" style="font-size:22px;font-weight:600;letter-spacing:-0.5px;">—</div>
-        <div id="perf-avg-delta" style="font-size:11px;color:#86868b;margin-top:2px;"></div>
+      <div class="perf-grid">
+        <div>
+          <div style="font-size:11px;color:#86868b;margin-bottom:3px;">Order to delivered</div>
+          <div id="perf-avg" style="font-size:22px;font-weight:600;letter-spacing:-0.5px;">—</div>
+          <div id="perf-avg-delta" style="font-size:11px;color:#86868b;margin-top:2px;"></div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:#86868b;margin-bottom:3px;">On time</div>
+          <div id="perf-ontime" style="font-size:22px;font-weight:600;letter-spacing:-0.5px;">—</div>
+          <div id="perf-ontime-delta" style="font-size:11px;color:#86868b;margin-top:2px;"></div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:#86868b;margin-bottom:3px;">Without problems</div>
+          <div id="perf-exc" style="font-size:22px;font-weight:600;letter-spacing:-0.5px;">—</div>
+          <div id="perf-exc-delta" style="font-size:11px;color:#86868b;margin-top:2px;"></div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:#86868b;margin-bottom:3px;">Delivered</div>
+          <div id="perf-delivered" style="font-size:22px;font-weight:600;letter-spacing:-0.5px;">—</div>
+          <div id="perf-delivered-delta" style="font-size:11px;color:#86868b;margin-top:2px;"></div>
+        </div>
       </div>
-      <div>
-        <div style="font-size:11px;color:#86868b;margin-bottom:3px;">On time</div>
-        <div id="perf-ontime" style="font-size:22px;font-weight:600;letter-spacing:-0.5px;">—</div>
-        <div id="perf-ontime-delta" style="font-size:11px;color:#86868b;margin-top:2px;"></div>
-      </div>
-      <div>
-        <div style="font-size:11px;color:#86868b;margin-bottom:3px;">Without problems</div>
-        <div id="perf-exc" style="font-size:22px;font-weight:600;letter-spacing:-0.5px;">—</div>
-        <div id="perf-exc-delta" style="font-size:11px;color:#86868b;margin-top:2px;"></div>
-      </div>
-      <div>
-        <div style="font-size:11px;color:#86868b;margin-bottom:3px;">Delivered</div>
-        <div id="perf-delivered" style="font-size:22px;font-weight:600;letter-spacing:-0.5px;">—</div>
-        <div id="perf-delivered-delta" style="font-size:11px;color:#86868b;margin-top:2px;"></div>
-      </div>
-    </div>
-    <div id="perf-note" style="font-size:11px;color:#86868b;margin-top:10px;"></div>
-    <div style="display:flex;justify-content:flex-end;">
       <button id="perf-settings-btn" onclick="togglePerfSettings()">Settings</button>
     </div>
+    <div id="perf-note" style="font-size:11px;color:#86868b;margin-top:10px;"></div>
     <!-- Settings panel -->
     <div id="perf-settings" style="display:none;margin-top:1rem;padding-top:1rem;border-top:1px solid #f2f2f7;">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
