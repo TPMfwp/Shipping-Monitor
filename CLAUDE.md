@@ -358,3 +358,7 @@ Ideas for later (not started):
 - Nu: Slack eerst, daarna meteen de sheet. Is het druk, dan in groepen van max 20 (`type:'batch'`, één groep tegelijk per winkel via slot `sheet|<store>`). Niets weg tot de sheet het bevestigt; `failed[]` = losse regels die opnieuw gaan.
 - @65: kolommen gelijktrekken max 1× per 10 min, opmaak 1× per tab per groep, statusupdates in één keer. Cron `alert-retry` elke minuut (stuurt alleen als er iets klaarstaat).
 - Gemeten: 14 statusupdates tegelijk = wachtrij leeg binnen 9–15 s, 2 metingen (was ~25 s). Nieuwe meldingen op volume: meten in ronde 2.
+
+### Kolom Supplier in de sheet (2026-11-25, webhook v35, sheet @66)
+- Naast Order # in alle ordertabs: `Supplier A` (huidige) / `Supplier B` (vanaf switch_from_order). Neutraal, zodat suppliers elkaars naam niet zien; wie de sheet opent ziet wel alle regels. Zonder switch leeg.
+- Wordt op één plek toegevoegd: `withSupplier` in `sendSheet` (webhook), dus ook voor shopify-orders. Performance: `writePerf_` maakt van perf-check's Old/New ook Supplier A/B (Slack-rapport ongewijzigd).

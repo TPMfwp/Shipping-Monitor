@@ -1364,7 +1364,7 @@ async function saveSheetLink(store){
 function sheetExamples(store){
   const t=thr(store),nt=t.nt||2,ago=n=>new Date(Date.now()-n*86400000).toISOString();
   const NAMES=['Jane Smith','Olivia Turner','Mary Johnson','Susan Williams','Grace Hughes','Laura Fisher','Emma Clarke','Daniel Moore','Anna Becker','Peter Novak','Sophie Martin','Lucas Meyer'],CAR=['DHL','UPS','GLS','DPD'],PROD=['Example product','Example set','Example jacket'];
-  const who=n=>({order:'#TESTWEB'+n,customer:NAMES[n%12],email:NAMES[n%12].toLowerCase().replace(' ','.')+'@example.com',product:`x${n%4===0?2:1} ${PROD[n%3]}`});
+  const who=n=>({order:'#TESTWEB'+n,supplier:n%2?'Supplier A':'Supplier B',customer:NAMES[n%12],email:NAMES[n%12].toLowerCase().replace(' ','.')+'@example.com',product:`x${n%4===0?2:1} ${PROD[n%3]}`});
   const trk=n=>'YTTEST'+String(100000+n),link=n=>'https://t.17track.net/en#nums='+trk(n);
   const row=(n,tab,alert,age,status,checkpoint,extra={})=>({tab,alert,alert_date:ago(0),...who(n),order_date:ago(age+1),ship_date:ago(age),tracking:trk(n),tracking_link:link(n),carrier:CAR[n%4],reason:'',prev_reason:'',checkpoint,status,...extra});
   const st=(n,status,checkpoint,extra={})=>({type:'status',order:'#TESTWEB'+n,tracking:trk(n),status,checkpoint,...extra});
