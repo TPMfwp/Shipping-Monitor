@@ -42,7 +42,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
 .pper:focus,#perf-settings-btn:focus{outline:none;}
 .pper:focus-visible,#perf-settings-btn:focus-visible{box-shadow:0 0 0 2px rgba(0,113,227,0.35);}
 #perf-settings-btn{grid-area:set;justify-self:end;align-self:end;margin-top:8px;font-size:11px;color:#0071e3;background:none;border:none;border-radius:4px;padding:0;cursor:pointer;font-weight:500;}
-@media(min-width:801px){.perf-top .perf-grid{gap:0;}.perf-top .perf-grid>div{padding-right:6px;}}
+@media(min-width:801px){.perf-top .perf-grid{gap:0;grid-template-columns:repeat(3,27.5%) 17.5%;}.perf-top .perf-grid>div{padding-right:6px;}.perf-top .perf-grid>div:first-child{padding-right:28px;}}
 @media(max-width:800px){.perf-top{grid-template-columns:1fr;grid-template-areas:"title" "bars" "grid" "set";grid-template-rows:none;}.perf-title{margin-bottom:8px;}.perf-bars{width:100%;margin-bottom:14px;}}
 @media(max-width:600px){.stats{grid-template-columns:repeat(2,1fr);}.perf-grid{grid-template-columns:repeat(2,1fr);row-gap:14px;}}
 .stat{background:white;border-radius:14px;padding:1.1rem 1.25rem;border:1px solid rgba(0,0,0,0.06);cursor:pointer;transition:border-color 0.15s;}
@@ -231,9 +231,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
           <input id="perf-alert-exc" type="number" min="1" max="99" placeholder="e.g. 95" style="width:100%;border:1px solid #d2d2d7;border-radius:8px;padding:7px 10px;font-size:13px;outline:none;">
         </div>
       </div>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <button onclick="savePerfSettings()" style="padding:7px 16px;border-radius:8px;border:none;background:#0071e3;color:white;font-size:12px;font-weight:500;cursor:pointer;">Save</button>
+      <div style="display:flex;gap:8px;align-items:center;justify-content:flex-end;">
         <div id="perf-settings-msg" style="font-size:12px;color:#34c759;"></div>
+        <button onclick="savePerfSettings()" style="padding:7px 16px;border-radius:8px;border:none;background:#0071e3;color:white;font-size:12px;font-weight:500;cursor:pointer;">Save</button>
       </div>
     </div>
   </div>
