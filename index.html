@@ -31,7 +31,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
 .perf-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
 .pper{border:none;background:transparent;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:500;color:#86868b;cursor:pointer;}
 .pper.active{background:white;color:#1d1d1f;box-shadow:0 1px 2px rgba(0,0,0,0.08);}
-.perf-top{display:grid;grid-template-columns:1fr auto;grid-template-areas:"title title" "grid bars" "grid set";grid-template-rows:auto auto 1fr;column-gap:0;}
+.perf-top{display:grid;grid-template-columns:1fr auto;grid-template-areas:"title set" "grid bars";column-gap:0;}
 .perf-title{grid-area:title;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#86868b;margin:4px 0 0.9rem;}
 .perf-top .perf-grid{grid-area:grid;}
 .perf-bars{grid-area:bars;display:flex;flex-direction:column;gap:4px;width:194px;}
@@ -41,9 +41,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
 .perf-bars .pper:last-child{flex:0 0 36px !important;}
 .pper:focus,#perf-settings-btn:focus{outline:none;}
 .pper:focus-visible,#perf-settings-btn:focus-visible{box-shadow:0 0 0 2px rgba(0,113,227,0.35);}
-#perf-settings-btn{grid-area:set;justify-self:end;align-self:end;margin-top:8px;font-size:11px;color:#0071e3;background:none;border:none;border-radius:4px;padding:0;cursor:pointer;font-weight:500;}
-@media(min-width:801px){.perf-top .perf-grid{gap:0;grid-template-columns:repeat(3,27.5%) 17.5%;}.perf-top .perf-grid>div{padding-right:6px;}.perf-top .perf-grid>div:first-child{padding-right:28px;}.perf-bars{margin-top:-16px;}.perf-top #perf-settings-btn{align-self:start;margin-top:12px;}}
-@media(max-width:800px){.perf-top{grid-template-columns:1fr;grid-template-areas:"title" "bars" "grid" "set";grid-template-rows:none;}.perf-title{margin-bottom:8px;}.perf-bars{width:100%;margin-bottom:14px;}}
+#perf-settings-btn{grid-area:set;justify-self:end;align-self:start;margin-top:4px;line-height:1.2;font-size:11px;color:#0071e3;background:none;border:none;border-radius:4px;padding:0;cursor:pointer;font-weight:500;}
+@media(min-width:801px){.perf-top .perf-grid{gap:0;grid-template-columns:repeat(3,27.5%) 17.5%;}.perf-top .perf-grid>div{padding-right:6px;}.perf-top .perf-grid>div:first-child{padding-right:28px;}.perf-bars{align-self:start;}.perf-top #perf-settings-btn{align-self:start;margin-top:4px;}}
+@media(max-width:800px){.perf-top{grid-template-columns:1fr auto;grid-template-areas:"title set" "bars bars" "grid grid";}.perf-title{margin-bottom:8px;}.perf-bars{width:100%;margin-bottom:14px;}}
 @media(max-width:600px){.stats{grid-template-columns:repeat(2,1fr);}.perf-grid{grid-template-columns:repeat(2,1fr);row-gap:14px;}}
 .stat{background:white;border-radius:14px;padding:1.1rem 1.25rem;border:1px solid rgba(0,0,0,0.06);cursor:pointer;transition:border-color 0.15s;}
 .stat:hover{border-color:#0071e3;}
@@ -1158,7 +1158,7 @@ function loadPerfSettingsUI(){
 //   wachten op ophalen = label → opgehaald (pickup_date), alleen voor orders waar ParcelPanel dat meestuurde
 // - zonder problemen: orders VERZONDEN in de periode, 14 dagen terug (nieuwere hebben nog geen tijd gehad om vast te lopen),
 //   probleem = huidige probleemstatus of ooit in de exception-sectie (action_log)
-const PERF_MIN=20, PERF_LAG=14, PROBLEM_ST=['EXCEPTION','EXPIRED','FAILED_ATTEMPT'];
+const PERF_MIN=20, PERF_LAG=14, PERF_WAIT_KNOWN=0.8, PROBLEM_ST=['EXCEPTION','EXPIRED','FAILED_ATTEMPT'];
 // Start altijd op All: bij een stille store zijn 7/30/90 dagen leeg en lijkt het alsof er iets mis is
 let perfPeriod='all';
 let perfSup='all';   // all / old / new, alleen zichtbaar als de winkel een supplier-switch heeft
@@ -1173,7 +1173,11 @@ function perfDelivery(data,from,to){
       return {total:gap(d.order_date||d.fulfillment_date,d.last_checkpoint_time),ship,wait,tr:wait!==null?ship-wait:ship,pr:d.order_date?gap(d.order_date,d.fulfillment_date):null,norm:normOf(d)};})
     .filter(x=>x.total>=0&&x.total<=120&&x.ship>=0);
   const ok=del.filter(x=>Math.floor(x.total)<=x.norm).length;
-  return {n:del.length,onTime:del.length?Math.round(ok/del.length*100):null,total:perfMean(del.map(x=>x.total)),transit:perfMean(del.map(x=>x.tr)),wait:perfMean(del.filter(x=>x.wait!==null).map(x=>x.wait)),proc:perfMean(del.filter(x=>x.pr!==null&&x.pr>=0&&x.pr<=60).map(x=>x.pr))};
+  // De onderdelen tellen altijd op tot het totaal. Wachten apart tonen kan alleen als de ophaaldatum van bijna alle orders bekend is; anders zit het in transit.
+  const total=perfMean(del.map(x=>x.total)),proc=perfMean(del.filter(x=>x.pr!==null&&x.pr>=0&&x.pr<=60).map(x=>x.pr)),known=del.filter(x=>x.wait!==null);
+  const wait=del.length&&known.length>=del.length*PERF_WAIT_KNOWN?perfMean(known.map(x=>x.wait)):null;
+  const rest=total===null?null:Math.round((total-(proc||0)-(wait||0))*10)/10;
+  return {n:del.length,onTime:del.length?Math.round(ok/del.length*100):null,total,proc,wait,transit:rest===null?null:Math.max(0,rest)};
 }
 function perfProblems(data,probIds,from,to){
   const sh=data.filter(d=>perfIn(d.fulfillment_date,from,to));
@@ -1211,7 +1215,7 @@ function renderPerformance(){
   set('perf-exc',pc.clean!==null?pc.clean+'%':'—',color(pc.clean,goalClean,pc.n,5));
   set('perf-exc-delta',join([goalClean!==null?`goal ${goalClean}%`:'',pp&&pp.clean!==null?`${prevL}: ${pp.clean}%`:'',few(pc.n)]));
   set('perf-avg',cur.total!==null?cur.total+'d':'—');
-  set('perf-avg-delta',join([[cur.proc!==null?`${cur.proc}d processing`:'',cur.wait!==null?`${cur.wait}d waiting for pickup`:'',cur.transit!==null?`${cur.transit}d transit`:''].filter(Boolean).join(' + '),prev&&prev.total!==null?`${prevL}: ${prev.total}d`:'']));
+  set('perf-avg-delta',join([[cur.proc!==null?`${cur.proc}d processing`:'',cur.wait!==null?`${cur.wait}d waiting for pickup`:'',cur.transit!==null?`${cur.transit}d transit${cur.wait===null?' (incl. waiting for pickup)':''}`:''].filter(Boolean).join(' + '),prev&&prev.total!==null?`${prevL}: ${prev.total}d`:'']));
   set('perf-delivered',cur.n);
   set('perf-delivered-delta',N?(prev?`${prevL}: ${prev.n}`:''):'all time');
   // Alleen een melding bij een lege periode, anders leeg (uitleg maakte het blok alleen drukker)
