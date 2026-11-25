@@ -171,12 +171,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
 
   <!-- Performance block -->
   <div id="perf-block" style="background:white;border-radius:14px;border:1px solid rgba(0,0,0,0.06);padding:1.1rem 1.25rem;margin-bottom:1rem;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.9rem;">
-      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#86868b;">Supplier Performance</div>
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:0.9rem;">
+      <div style="align-self:flex-start;padding-top:5px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#86868b;">Supplier Performance</div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
         <div id="perf-sup" style="display:none;gap:2px;background:#f2f2f7;border-radius:8px;padding:2px;"></div>
         <div id="perf-period" style="display:flex;gap:2px;background:#f2f2f7;border-radius:8px;padding:2px;"></div>
-        <button id="perf-settings-btn" onclick="togglePerfSettings()" style="font-size:11px;color:#0071e3;background:none;border:none;cursor:pointer;font-weight:500;">Settings</button>
       </div>
     </div>
     <div class="perf-grid">
@@ -202,6 +201,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
       </div>
     </div>
     <div id="perf-note" style="font-size:11px;color:#86868b;margin-top:10px;"></div>
+    <div style="display:flex;justify-content:flex-end;margin-top:10px;">
+      <button id="perf-settings-btn" onclick="togglePerfSettings()" style="font-size:11px;color:#0071e3;background:none;border:none;padding:0;cursor:pointer;font-weight:500;">Settings</button>
+    </div>
     <!-- Settings panel -->
     <div id="perf-settings" style="display:none;margin-top:1rem;padding-top:1rem;border-top:1px solid #f2f2f7;">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
@@ -1174,7 +1176,7 @@ function renderPerformance(){
   const data=store==='all'?all:all.filter(d=>d.store_name===store&&(sup==='all'||isNewSupplier(store,d.order_number)===(sup==='new')));
   const supEl=document.getElementById('perf-sup');
   supEl.style.display=sw?'flex':'none';
-  supEl.innerHTML=sw?[['all','All'],['old','Old supplier'],['new','New supplier']].map(([k,l])=>`<button class="pper${sup===k?' active':''}" onclick="setPerfSup('${k}')">${l}</button>`).join(''):'';
+  supEl.innerHTML=sw?[['new','New supplier'],['old','Old supplier'],['all','All']].map(([k,l])=>`<button class="pper${sup===k?' active':''}" onclick="setPerfSup('${k}')">${l}</button>`).join(''):'';
   const settingsBtn=document.getElementById('perf-settings-btn');
   if(settingsBtn)settingsBtn.style.display=store==='all'?'none':'block';
   document.getElementById('perf-period').innerHTML=[['7','7d'],['30','30d'],['90','90d'],['all','All']].map(([k,l])=>`<button class="pper${perfPeriod===k?' active':''}" onclick="setPerfPeriod('${k}')">${l}</button>`).join('');
