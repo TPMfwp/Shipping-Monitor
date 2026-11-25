@@ -31,7 +31,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
 .perf-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
 .pper{border:none;background:transparent;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:500;color:#86868b;cursor:pointer;}
 .pper.active{background:white;color:#1d1d1f;box-shadow:0 1px 2px rgba(0,0,0,0.08);}
-@media(max-width:600px){.stats{grid-template-columns:repeat(2,1fr);}.perf-grid{grid-template-columns:repeat(2,1fr);row-gap:14px;}}
+.perf-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px 20px;margin-bottom:1.1rem;}
+.perf-bars{display:flex;flex-direction:column;gap:6px;width:264px;}
+.perf-bars>div{gap:2px;background:#f2f2f7;border-radius:8px;padding:2px;}
+.perf-bars .pper{flex:1 1 0;padding:5px 4px;white-space:nowrap;}
+.pper:focus,#perf-settings-btn:focus{outline:none;}
+.pper:focus-visible,#perf-settings-btn:focus-visible{box-shadow:0 0 0 2px rgba(0,113,227,0.35);}
+#perf-settings-btn{margin-top:12px;background:#f2f2f7;border:none;border-radius:8px;padding:6px 14px;font-size:11px;font-weight:500;color:#1d1d1f;cursor:pointer;}
+@media(max-width:600px){.perf-head{flex-direction:column;}.perf-bars{width:100%;}.stats{grid-template-columns:repeat(2,1fr);}.perf-grid{grid-template-columns:repeat(2,1fr);row-gap:14px;}}
 .stat{background:white;border-radius:14px;padding:1.1rem 1.25rem;border:1px solid rgba(0,0,0,0.06);cursor:pointer;transition:border-color 0.15s;}
 .stat:hover{border-color:#0071e3;}
 .stat.active{border-color:#0071e3;border-width:2px;}
@@ -171,11 +178,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
 
   <!-- Performance block -->
   <div id="perf-block" style="background:white;border-radius:14px;border:1px solid rgba(0,0,0,0.06);padding:1.1rem 1.25rem;margin-bottom:1rem;">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:0.9rem;">
-      <div style="align-self:flex-start;padding-top:5px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#86868b;">Supplier Performance</div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
-        <div id="perf-sup" style="display:none;gap:2px;background:#f2f2f7;border-radius:8px;padding:2px;"></div>
-        <div id="perf-period" style="display:flex;gap:2px;background:#f2f2f7;border-radius:8px;padding:2px;"></div>
+    <div class="perf-head">
+      <div style="padding-top:7px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#86868b;">Supplier Performance</div>
+      <div class="perf-bars">
+        <div id="perf-sup" style="display:none;"></div>
+        <div id="perf-period" style="display:flex;"></div>
       </div>
     </div>
     <div class="perf-grid">
@@ -201,8 +208,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;ba
       </div>
     </div>
     <div id="perf-note" style="font-size:11px;color:#86868b;margin-top:10px;"></div>
-    <div style="display:flex;justify-content:flex-end;margin-top:10px;">
-      <button id="perf-settings-btn" onclick="togglePerfSettings()" style="font-size:11px;color:#0071e3;background:none;border:none;padding:0;cursor:pointer;font-weight:500;">Settings</button>
+    <div style="display:flex;justify-content:flex-end;">
+      <button id="perf-settings-btn" onclick="togglePerfSettings()">Settings</button>
     </div>
     <!-- Settings panel -->
     <div id="perf-settings" style="display:none;margin-top:1rem;padding-top:1rem;border-top:1px solid #f2f2f7;">
